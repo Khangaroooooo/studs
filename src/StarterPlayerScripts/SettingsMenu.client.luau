@@ -315,6 +315,22 @@ end)
 
 createSectionHeader("Game", 10)
 
+-- Story Mode: the "Seven Ways Home" ambient narration (margin-notes, Merle,
+-- dex asides). OFF = Casual — the pure collector loop, nothing hidden but
+-- words. Server-authoritative (persisted on the save slot), switchable
+-- mid-save any time; StorySystem picks the thread back up on re-enable.
+local storyToggle = createToggle("Story Mode", player:GetAttribute("StoryMode") ~= false, 11, function(state)
+	StudEvents.SetStoryMode:FireServer(state)
+end)
+
+-- Reflect the authoritative attribute (set on load, after the server applies
+-- a toggle, or when a different save slot is loaded mid-session)
+player:GetAttributeChangedSignal("StoryMode"):Connect(function()
+	local on = player:GetAttribute("StoryMode") ~= false
+	storyToggle.BackgroundColor3 = on and Color3.fromRGB(60, 160, 60) or Color3.fromRGB(80, 80, 100)
+	storyToggle.Text = on and "ON" or "OFF"
+end)
+
 -- Manual save button — fires the same SaveData remote the autosave loop and
 -- PlayerRemoving/BindToClose paths use on the server, so players can force
 -- a save on demand instead of only relying on the 60s autosave tick.
@@ -327,7 +343,7 @@ saveBtn.TextColor3 = Color3.fromRGB(150, 255, 170)
 saveBtn.Font = Enum.Font.GothamBold
 saveBtn.TextSize = 12
 saveBtn.BorderSizePixel = 0
-saveBtn.LayoutOrder = 11
+saveBtn.LayoutOrder = 12
 saveBtn.Parent = scrollFrame
 
 local saveCooldown = false
@@ -345,7 +361,7 @@ saveBtn.MouseButton1Click:Connect(function()
 	end)
 end)
 
-createSectionHeader("Controls", 12)
+createSectionHeader("Controls", 13)
 
 -- Reset settings button
 local resetBtn = Instance.new("TextButton")
@@ -357,7 +373,7 @@ resetBtn.TextColor3 = Color3.fromRGB(255, 150, 150)
 resetBtn.Font = Enum.Font.GothamBold
 resetBtn.TextSize = 12
 resetBtn.BorderSizePixel = 0
-resetBtn.LayoutOrder = 13
+resetBtn.LayoutOrder = 14
 resetBtn.Parent = scrollFrame
 
 
@@ -385,7 +401,7 @@ keybindLabel.Text = "Press ESC or P to close"
 keybindLabel.TextColor3 = Color3.fromRGB(120, 120, 150)
 keybindLabel.Font = Enum.Font.Gotham
 keybindLabel.TextSize = 11
-keybindLabel.LayoutOrder = 14
+keybindLabel.LayoutOrder = 15
 keybindLabel.Parent = scrollFrame
 
 -- ─── TITLES SECTION ─────────────────────────────────────────────────────

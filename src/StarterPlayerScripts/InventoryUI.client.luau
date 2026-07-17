@@ -51,7 +51,9 @@ local gui
 local main
 local isOpen       = false
 local collection   = {}   -- array of stud data from server
-local equippedStudId = nil -- currently equipped stud, from server
+local equippedStudId = nil -- team lead (equippedTeam[1]), from server
+local equippedTeam = {}    -- ordered battle team (species ids, ≤ 6)
+local MAX_TEAM = 6
 local heldItems    = {}   -- [speciesId] = itemId (equipped held items)
 local ownedItems   = {}   -- [itemId] = count (unequipped pool, for the picker)
 local filtered     = {}   -- filtered subset
@@ -456,13 +458,15 @@ function populateGrid()
             parent = tile,
         })
 
-        -- Equipped indicator (small tag along the bottom of the tile)
-        if equippedStudId and stud.id == equippedStudId then
+        -- Team indicator: ★ LEAD for the lead, • TEAM for other members
+        local isLead = equippedStudId ~= nil and stud.id == equippedStudId
+        local onTeam = table.find(equippedTeam, stud.id) ~= nil
+        if isLead or onTeam then
             mkLabel({
                 name   = "EquippedTag",
                 size   = UDim2.new(1, -8, 0, 14),
                 pos    = UDim2.new(0, 8, 1, -18),
-                text   = "EQUIPPED",
+                text   = isLead and "★ LEAD" or "• TEAM",
                 color  = C_ACCENT,
                 font   = F_BTN,
                 ts     = 10,
@@ -738,42 +742,99 @@ function showDetail(stud)
     end
     y = y + 8
 
-    -- EQUIP button (toggles equip/unequip for this stud)
-    local isEquipped = equippedStudId ~= nil and stud.id == equippedStudId
-    local equipBtn = mkBtn({
-        name   = "EquipBtn",
+    -- ─── BATTLE TEAM controls ────────────────────────────────────────────
+    -- Add/remove this species from the team (≤ MAX_TEAM), and set it as the
+    -- lead (the stud that leads every battle and represents you overworld).
+    local onTeam = table.find(equippedTeam, stud.id) ~= nil
+    local isLead = equippedStudId ~= nil and stud.id == equippedStudId
+    local teamFull = #equippedTeam >= MAX_TEAM
+
+    -- Refresh local team state from a server response, then repaint
+    local function applyTeamResult(result)
+        equippedTeam = result.team or equippedTeam
+        equippedStudId = result.lead or result.studId or equippedStudId
+        populateGrid()
+        showDetail(stud)
+    end
+
+    local toggleText
+    if onTeam then
+        toggleText = "REMOVE FROM TEAM"
+    elseif teamFull then
+        toggleText = "TEAM FULL (" .. #equippedTeam .. "/" .. MAX_TEAM .. ")"
+    else
+        toggleText = "ADD TO TEAM (" .. #equippedTeam .. "/" .. MAX_TEAM .. ")"
+    end
+
+    local teamBtn = mkBtn({
+        name   = "TeamBtn",
         size   = UDim2.new(1, 0, 0, 36),
         pos    = UDim2.new(0, 0, 0, y),
-        text   = isEquipped and "EQUIPPED" or "EQUIP",
-        tc     = isEquipped and C_BG or C_WHITE,
+        text   = toggleText,
+        tc     = onTeam and C_BG or C_WHITE,
         font   = F_BTN,
         ts     = 15,
-        bg     = isEquipped and C_ACCENT or C_BTN_N,
-        sc     = isEquipped and C_ACCENT or C_SEC,
+        bg     = onTeam and C_ACCENT or C_BTN_N,
+        sc     = onTeam and C_ACCENT or C_SEC,
         parent = detailContent,
     })
     y = y + 44
 
-    equipBtn.MouseButton1Click:Connect(function()
-        if isEquipped then return end -- already equipped, nothing to do
-        setBtnDisabled(equipBtn, true)
-        equipBtn.Text = "EQUIPPING..."
+    if not onTeam and teamFull then
+        setBtnDisabled(teamBtn, true)
+    end
+
+    teamBtn.MouseButton1Click:Connect(function()
+        if not onTeam and teamFull then return end
+        setBtnDisabled(teamBtn, true)
+        teamBtn.Text = "..."
         local ok, result = pcall(function()
-            return StudEvents.EquipStud:InvokeServer(stud.id)
+            return StudEvents.ToggleTeamMember:InvokeServer(stud.id)
         end)
         if ok and result and result.success then
-            equippedStudId = stud.id
-            -- Refresh grid (for the EQUIPPED tag) and re-render this detail panel
-            populateGrid()
-            showDetail(stud)
+            applyTeamResult(result)
         else
-            equipBtn.Text = "EQUIP FAILED"
+            teamBtn.Text = (result and result.reason == "team_full") and "TEAM FULL" or "FAILED"
             task.delay(1, function()
-                setBtnDisabled(equipBtn, false)
-                equipBtn.Text = "EQUIP"
+                setBtnDisabled(teamBtn, false)
+                teamBtn.Text = toggleText
             end)
         end
     end)
+
+    -- Lead control: a badge when this stud already leads, otherwise a button
+    -- to promote it (only meaningful once it's on the team)
+    if isLead then
+        mkLabel({
+            name = "LeadBadge", size = UDim2.new(1, 0, 0, 22), pos = UDim2.new(0, 0, 0, y),
+            text = "★ TEAM LEAD", color = C_ACCENT, font = F_BTN, ts = 14,
+            xa = Enum.TextXAlignment.Center, parent = detailContent,
+        })
+        y = y + 28
+    elseif onTeam then
+        local leadBtn = mkBtn({
+            name = "LeadBtn", size = UDim2.new(1, 0, 0, 32), pos = UDim2.new(0, 0, 0, y),
+            text = "SET AS LEAD", tc = C_WHITE, font = F_BTN, ts = 14,
+            bg = C_BTN_N, sc = C_SEC, parent = detailContent,
+        })
+        y = y + 40
+        leadBtn.MouseButton1Click:Connect(function()
+            setBtnDisabled(leadBtn, true)
+            leadBtn.Text = "..."
+            local ok, result = pcall(function()
+                return StudEvents.EquipStud:InvokeServer(stud.id)
+            end)
+            if ok and result and result.success then
+                applyTeamResult(result)
+            else
+                leadBtn.Text = "FAILED"
+                task.delay(1, function()
+                    setBtnDisabled(leadBtn, false)
+                    leadBtn.Text = "SET AS LEAD"
+                end)
+            end
+        end)
+    end
 
     -- ─── ABILITY (Rare/Legendary passive) ────────────────────────────────
     local ability = StudData.GetAbility(stud.id)
@@ -969,14 +1030,15 @@ end
 -- ─── REQUEST COLLECTION FROM SERVER ──────────────────────────────────────
 
 function requestCollection()
-    local ok, data, equippedId, heldMap, itemsMap = pcall(function()
+    local ok, data, equippedId, heldMap, itemsMap, teamArr = pcall(function()
         return StudEvents.RequestCollection:InvokeServer()
     end)
     -- pcall's first return is success; RequestCollection itself returns
-    -- (caughtStuds, equippedStudId, heldItems, items), so re-unpack from the
-    -- pcall results.
+    -- (caughtStuds, equippedStudId, heldItems, items, equippedTeam), so
+    -- re-unpack from the pcall results.
     if ok and data then
         equippedStudId = equippedId
+        equippedTeam = teamArr or {}
         heldItems = heldMap or {}
         ownedItems = itemsMap or {}
         collection = {}

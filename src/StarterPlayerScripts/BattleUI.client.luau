@@ -76,6 +76,9 @@ local ballOptions    = {}   -- picker slots: { id, label, disabled }
 -- "arena"     = Battle Arena battle (BattleAction remote, AI opponent)
 local battleMode     = "encounter"
 local trainerMode    = false -- arena battle vs a trainer's team (no catching)
+local inSwitchMode   = false -- the Studs switch panel is open
+local forcedSwitch   = false -- active stud fainted; a switch is mandatory
+local teamRoster     = {}    -- [{index,id,name,studType,rarity,level,hp,maxHP,fainted,active}]
 
 local wildInfo  = { name = "?", studType = "Fire", rarity = "Common" }
 local pInfo     = { name = "?", studType = "Fire", rarity = "Common" }
@@ -109,10 +112,13 @@ local wildStatTxts, pStatTxts = {}, {}
 local wildStatusLbl -- 🔥/❄️/⚡ badge next to the wild's VITALITY label
 local logLabels = {}
 local bottomFrame, catchFrame
-local atkBtn, catchBtn, runBtn
+local atkBtn, catchBtn, studsBtn, runBtn
 local moveBtn4 -- 4th kit slot (Lv50 move); only visible in move mode
 local backBtn
 local catchBarFill, catchTimerLbl, catchTapBtn
+local switchFrame, switchBackBtn, switchTitleLbl
+local switchRowBtns = {} -- up to MAX_TEAM_SLOTS static rows in the Studs panel
+local MAX_TEAM_SLOTS = 6
 
 -- ─── BUTTON STATE LOOKUP (avoids custom methods on Instances) ──────────
 local _btnState = {}  -- [button] = { disabled, nBg, nTc, nSc, stroke }
@@ -605,18 +611,24 @@ local function buildUI()
     })
     mkFrame({ name = "TopDivider", size = UDim2.new(1, -16, 0, 1), pos = UDim2.new(0, 8, 0, 0), bg = C_LINE, corner = false, parent = bottomFrame })
 
+    -- Four-across action bar: Attack · Catch · Studs · Run
     atkBtn = mkBtn({
-        name = "AtkBtn", size = UDim2.new(0.31, 0, 0.78, 0), pos = UDim2.new(0, 0, 0.14, 0),
+        name = "AtkBtn", size = UDim2.new(0.235, 0, 0.78, 0), pos = UDim2.new(0, 0, 0.14, 0),
         text = "⚔️ ATTACK", tc = C_INK, bg = C_BTN_N, sc = C_GOLD, parent = bottomFrame,
     })
 
     catchBtn = mkBtn({
-        name = "CatchBtn", size = UDim2.new(0.31, 0, 0.78, 0), pos = UDim2.new(0.345, 0, 0.14, 0),
+        name = "CatchBtn", size = UDim2.new(0.235, 0, 0.78, 0), pos = UDim2.new(0.255, 0, 0.14, 0),
         text = "🎯 CATCH", tc = C_INK, bg = C_BTN_N, sc = C_GOLD, parent = bottomFrame,
     })
 
+    studsBtn = mkBtn({
+        name = "StudsBtn", size = UDim2.new(0.235, 0, 0.78, 0), pos = UDim2.new(0.51, 0, 0.14, 0),
+        text = "🔄 STUDS", tc = C_INK, bg = C_BTN_N, sc = C_GOLD, parent = bottomFrame,
+    })
+
     runBtn = mkBtn({
-        name = "RunBtn", size = UDim2.new(0.31, 0, 0.78, 0), pos = UDim2.new(0.69, 0, 0.14, 0),
+        name = "RunBtn", size = UDim2.new(0.235, 0, 0.78, 0), pos = UDim2.new(0.765, 0, 0.14, 0),
         text = ">  RUN", tc = C_INK, bg = C_BTN_N, sc = C_GOLD, parent = bottomFrame,
     })
 
@@ -678,6 +690,42 @@ local function buildUI()
     catchTapBtn = mkBtn({
         name = "TapBtn", size = UDim2.new(1, 0, 0, 60), pos = UDim2.new(0, 0, 0, 130),
         text = "🎯 TAP TO CAPTURE", tc = C_VOID, font = F_DISPLAY, ts = 14, bg = C_GOLD, sc = C_GOLD, parent = catchFrame,
+    })
+
+    -- ── STUDS PANEL (team switch, hidden by default) ────────────────────
+    switchFrame = mkFrame({
+        name = "StudsConsole", size = UDim2.new(0, 380, 0, 78 + MAX_TEAM_SLOTS * 52 + 56),
+        pos = UDim2.new(0.5, -190, 0.22, 0),
+        bg = C_CARD, stroke = C_LINE, strokeThickness = 3, corner = 14, pad = 18, parent = main,
+    })
+    mkStudBumps(switchFrame, 6)
+    switchFrame.Visible = false
+
+    switchTitleLbl = mkLabel({
+        name = "StudsTitle", size = UDim2.new(1, 0, 0, 26), text = "🔄 SWITCH STUD",
+        color = C_GOLD, font = F_DISPLAY, ts = 15, xa = Enum.TextXAlignment.Center, parent = switchFrame,
+    })
+
+    for i = 1, MAX_TEAM_SLOTS do
+        local row = mkBtn({
+            name = "SwitchRow" .. i,
+            size = UDim2.new(1, 0, 0, 46),
+            pos = UDim2.new(0, 0, 0, 36 + (i - 1) * 52),
+            text = "-", tc = C_INK, font = F_BTN, ts = 13,
+            bg = C_BTN_N, sc = C_LINE, parent = switchFrame,
+        })
+        row.TextXAlignment = Enum.TextXAlignment.Left
+        local pad = Instance.new("UIPadding")
+        pad.PaddingLeft = UDim.new(0, 12)
+        pad.PaddingRight = UDim.new(0, 12)
+        pad.Parent = row
+        switchRowBtns[i] = row
+    end
+
+    switchBackBtn = mkBtn({
+        name = "StudsBack", size = UDim2.new(1, 0, 0, 40),
+        pos = UDim2.new(0, 0, 0, 36 + MAX_TEAM_SLOTS * 52 + 6),
+        text = "< BACK", tc = C_GOLD, font = F_BTN, ts = 13, bg = C_BTN_N, sc = C_GOLD, parent = switchFrame,
     })
 end
 
@@ -826,10 +874,67 @@ local function setActionsEnabled(enabled)
     setBtnDisabled(atkBtn, not enabled)
     setBtnDisabled(catchBtn, not enabled)
     setBtnDisabled(runBtn, not enabled)
+    if studsBtn.Visible then
+        setBtnDisabled(studsBtn, not enabled)
+    end
     if inMoveMode then
         setBtnDisabled(moveBtn4, not enabled)
         setBtnDisabled(backBtn, not enabled)
     end
+end
+
+-- ─── TEAM SWITCH PANEL ──────────────────────────────────────────────────
+
+local function updateTeamRoster(team)
+    if type(team) == "table" then
+        teamRoster = team
+    end
+end
+
+local function isSwitchable(m)
+    return m and not m.active and not (m.fainted or ((m.hp or 0) <= 0))
+end
+
+-- Open the Studs panel. `forced` = the active stud fainted, so a pick is
+-- mandatory (no BACK, and every action button stays locked behind it).
+local function showSwitchMenu(forced)
+    inSwitchMode = true
+    forcedSwitch = forced or false
+    switchTitleLbl.Text = forcedSwitch and "🔄 CHOOSE YOUR NEXT STUD" or "🔄 SWITCH STUD"
+
+    for i = 1, MAX_TEAM_SLOTS do
+        local btn = switchRowBtns[i]
+        local m = teamRoster[i]
+        if m then
+            local tag = ""
+            if m.active then
+                tag = "   ● ACTIVE"
+            elseif m.fainted or ((m.hp or 0) <= 0) then
+                tag = "   ✖ FAINTED"
+            end
+            btn.Text = (typeIcon(m.studType) or "") .. " " .. (m.name or "?")
+                .. "  Lv" .. (m.level or 1)
+                .. "   HP " .. math.max(0, math.floor(m.hp or 0)) .. "/" .. (m.maxHP or 0) .. tag
+            btn.Visible = true
+            setBtnDisabled(btn, not isSwitchable(m))
+        else
+            btn.Visible = false
+        end
+    end
+
+    switchBackBtn.Visible = not forcedSwitch
+    switchFrame.Visible = true
+
+    -- The panel is modal: disable the action bar behind it and clear the
+    -- action lock so the row buttons (and keyboard) can drive the switch.
+    setActionsEnabled(false)
+    actionLocked = false
+end
+
+local function hideSwitchMenu()
+    inSwitchMode = false
+    forcedSwitch = false
+    switchFrame.Visible = false
 end
 
 -- ─── MOVE SUB-MENU ──────────────────────────────────────────────────────
@@ -840,6 +945,7 @@ local function showMoves()
     local pLevel = pInfo.level or 1
 
     -- Four move slots + back: 0.18 wide at 0 / 0.195 / 0.39 / 0.585
+    studsBtn.Visible = false
     atkBtn.Size = UDim2.new(0.18, 0, 0.78, 0)
     atkBtn.Position = UDim2.new(0, 0, 0.14, 0)
     catchBtn.Size = UDim2.new(0.18, 0, 0.78, 0)
@@ -875,14 +981,19 @@ local function hideMoves()
     inMoveMode = false
     inBallMode = false
 
-    atkBtn.Size = UDim2.new(0.31, 0, 0.78, 0)
+    -- Restore the four-across action bar (Attack · Catch · Studs · Run)
+    atkBtn.Size = UDim2.new(0.235, 0, 0.78, 0)
     atkBtn.Position = UDim2.new(0, 0, 0.14, 0)
     atkBtn.Text = "⚔️ ATTACK"
-    catchBtn.Size = UDim2.new(0.31, 0, 0.78, 0)
-    catchBtn.Position = UDim2.new(0.345, 0, 0.14, 0)
+    catchBtn.Size = UDim2.new(0.235, 0, 0.78, 0)
+    catchBtn.Position = UDim2.new(0.255, 0, 0.14, 0)
     catchBtn.Text = "🎯 CATCH"
-    runBtn.Size = UDim2.new(0.31, 0, 0.78, 0)
-    runBtn.Position = UDim2.new(0.69, 0, 0.14, 0)
+    studsBtn.Size = UDim2.new(0.235, 0, 0.78, 0)
+    studsBtn.Position = UDim2.new(0.51, 0, 0.14, 0)
+    studsBtn.Text = "🔄 STUDS"
+    studsBtn.Visible = true
+    runBtn.Size = UDim2.new(0.235, 0, 0.78, 0)
+    runBtn.Position = UDim2.new(0.765, 0, 0.14, 0)
     runBtn.Text = ">  RUN"
 
     moveBtn4.Visible = false
@@ -1110,6 +1221,13 @@ local function handleMoveSelect(i)
                 updatePlayerExp(result.newLevel or pInfo.level or 1, result.newExp)
             end
             task.delay(2, closeUI)
+        elseif result.result == "force_switch" then
+            -- Active stud fainted but the team has a live reserve: force a
+            -- (free) switch instead of ending the battle.
+            addLog("Your " .. pInfo.name .. " fainted!")
+            if result.team then updateTeamRoster(result.team) end
+            showSwitchMenu(true)
+            return -- stay locked until the player picks a reserve
         elseif result.result == "player_fainted" then
             addLog("Your " .. pInfo.name .. " fainted!")
             if result.coinsLost and result.coinsLost > 0 then
@@ -1165,6 +1283,11 @@ local function doCatch(ballId)
                     end
                 end
                 task.delay(1.2, closeUI)
+            elseif result and result.result == "force_switch" then
+                addLog("Your " .. pInfo.name .. " fainted!")
+                if result.playerHP then updatePlayerHP(result.playerHP, result.playerMaxHP or pMaxHP) end
+                if result.team then updateTeamRoster(result.team) end
+                showSwitchMenu(true) -- mandatory; stays locked until picked
             elseif result and result.result == "player_fainted" then
                 addLog("Your " .. pInfo.name .. " fainted!")
                 if result.coinsLost and result.coinsLost > 0 then
@@ -1226,6 +1349,15 @@ end
 -- from the shop's ShopInfo remote; unowned balls are greyed out)
 local function showBallPicker()
     inBallMode = true
+    studsBtn.Visible = false
+    -- Ball picker uses three slots (atk/catch/run) + back; restore the wider
+    -- 3-across layout the picker was designed around.
+    atkBtn.Size = UDim2.new(0.31, 0, 0.78, 0)
+    atkBtn.Position = UDim2.new(0, 0, 0.14, 0)
+    catchBtn.Size = UDim2.new(0.31, 0, 0.78, 0)
+    catchBtn.Position = UDim2.new(0.345, 0, 0.14, 0)
+    runBtn.Size = UDim2.new(0.31, 0, 0.78, 0)
+    runBtn.Position = UDim2.new(0.69, 0, 0.14, 0)
 
     local counts = {}
     local infoFunc = StudEvents:FindFirstChild("ShopInfo")
@@ -1319,7 +1451,7 @@ local function handleRun()
     if ok and result and result.result == "escaped" then
         addLog("Got away safely!")
         task.delay(0.8, closeUI)
-    elseif ok and result and (result.result == "flee_failed" or result.result == "player_fainted") then
+    elseif ok and result and (result.result == "flee_failed" or result.result == "player_fainted" or result.result == "force_switch") then
         -- Speed-based flee failed: the wild stud got a free hit in
         addLog("Couldn't escape!")
         if result.playerHP then
@@ -1328,7 +1460,11 @@ local function handleRun()
         if result.wildDmg then
             addLog("Wild " .. wildInfo.name .. " attacked for " .. math.floor(result.wildDmg) .. " damage!")
         end
-        if result.result == "player_fainted" then
+        if result.result == "force_switch" then
+            addLog("Your " .. pInfo.name .. " fainted!")
+            if result.team then updateTeamRoster(result.team) end
+            showSwitchMenu(true) -- mandatory; stays locked until picked
+        elseif result.result == "player_fainted" then
             addLog("Your " .. pInfo.name .. " fainted!")
             if result.coinsLost and result.coinsLost > 0 then
                 addLog("Dropped " .. result.coinsLost .. " coins!")
@@ -1342,6 +1478,96 @@ local function handleRun()
         addLog("Can't escape!")
         actionLocked = false
         setActionsEnabled(true)
+    end
+end
+
+-- ─── STUDS (TEAM SWITCH) HANDLERS ──────────────────────────────────────
+
+local function handleStuds()
+    if actionLocked or catchActive then return end
+    if pInfo.hasStud == false then
+        addLog("No Stud Equipped!")
+        return
+    end
+    local switchable = 0
+    for _, m in ipairs(teamRoster) do
+        if isSwitchable(m) then switchable += 1 end
+    end
+    if switchable <= 0 then
+        addLog("No other Studs to switch to!")
+        return
+    end
+    showSwitchMenu(false)
+end
+
+-- Apply an encounter-mode Switch result (synchronous EncounterAction return)
+local function applyEncounterSwitch(result)
+    if result.team then updateTeamRoster(result.team) end
+    if result.switchedTo then
+        local s = result.switchedTo
+        setPlayerInfo({
+            hasStud = true, id = s.id, name = s.name, studType = s.studType,
+            rarity = s.rarity, level = s.level, exp = s.exp, heldItem = s.heldItem,
+        })
+        addLog("Go, " .. (s.name or "Stud") .. "!")
+    end
+    if result.playerHP then
+        updatePlayerHP(result.playerHP, result.playerMaxHP or pMaxHP)
+    end
+    if result.wildDmg and result.wildDmg > 0 then
+        addLog("Wild " .. wildInfo.name .. " struck for " .. math.floor(result.wildDmg) .. " damage!")
+    end
+
+    if result.result == "force_switch" then
+        -- The stud we just sent in fainted to the wild's free hit, but another
+        -- reserve is alive — force another pick.
+        addLog("Your " .. pInfo.name .. " fainted!")
+        showSwitchMenu(true)
+        return -- stay locked
+    elseif result.result == "player_fainted" then
+        addLog("Your " .. pInfo.name .. " fainted!")
+        if result.coinsLost and result.coinsLost > 0 then
+            addLog("Dropped " .. result.coinsLost .. " coins!")
+        end
+        task.delay(2, closeUI)
+        return
+    end
+    actionLocked = false
+    setActionsEnabled(true)
+end
+
+local function handleSwitchSelect(idx)
+    if actionLocked then return end
+    local m = teamRoster[idx]
+    if not isSwitchable(m) then return end
+    actionLocked = true
+    hideSwitchMenu()
+    setActionsEnabled(false)
+    addLog("Switching to " .. (m.name or "Stud") .. "...")
+
+    if battleMode == "arena" then
+        -- Result arrives via BattleState (switch_done / turn_update / force_switch)
+        pcall(function()
+            return StudEvents.BattleAction:InvokeServer("Switch", idx)
+        end)
+        return
+    end
+
+    -- Encounter mode: synchronous response
+    local ok, result = pcall(function()
+        return StudEvents.EncounterAction:InvokeServer("Switch", idx)
+    end)
+    if ok and result and result.success then
+        applyEncounterSwitch(result)
+    else
+        addLog("Couldn't switch!")
+        -- A forced switch must be retried, not abandoned
+        if result and result.reason == "must_switch" then
+            showSwitchMenu(true)
+        else
+            actionLocked = false
+            setActionsEnabled(true)
+        end
     end
 end
 
@@ -1378,6 +1604,11 @@ local function connectEvents()
         end
     end)
 
+    studsBtn.MouseButton1Click:Connect(function()
+        if inBallMode or inMoveMode then return end
+        handleStuds()
+    end)
+
     moveBtn4.MouseButton1Click:Connect(function()
         if inMoveMode then
             handleMoveSelect(4)
@@ -1390,6 +1621,21 @@ local function connectEvents()
         hideMoves()
         if not actionLocked then
             setActionsEnabled(true)
+        end
+    end)
+
+    -- Studs panel: each row switches to that team member; BACK closes it
+    -- (only when the switch is optional, not a forced post-faint pick)
+    for i = 1, MAX_TEAM_SLOTS do
+        switchRowBtns[i].MouseButton1Click:Connect(function()
+            handleSwitchSelect(i)
+        end)
+    end
+    switchBackBtn.MouseButton1Click:Connect(function()
+        if forcedSwitch then return end
+        hideSwitchMenu()
+        if not actionLocked then
+            setActionsEnabled(true) -- restore the action bar
         end
     end)
 end
@@ -1433,6 +1679,7 @@ local function openBattleUI(wildStud, playerStud, wMax, pMax)
         wildStatusLbl.Text = "" -- fresh wild, no status
     end
     hideMoves()
+    hideSwitchMenu()
     catchFrame.Visible = false
     catchActive = false
     catchRunning = false
@@ -1455,6 +1702,8 @@ function closeUI()
     catchFrame.Visible = false
     catchActive = false
     actionLocked = false
+    hideSwitchMenu()
+    teamRoster = {}
 
     setWorldHudVisible(true)
 
@@ -1503,6 +1752,8 @@ StudEvents.EncounterStart.OnClientEvent:Connect(function(data)
         data.playerMaxHP or (playerStud.hasStud and 80 or 0)
     )
 
+    updateTeamRoster(data.team or {})
+
     if data.wildHP then updateWildHP(data.wildHP, data.wildMaxHP or 80) end
     if data.playerHP then
         updatePlayerHP(data.playerHP, data.playerMaxHP or 80)
@@ -1535,6 +1786,7 @@ StudEvents.BattleState.OnClientEvent:Connect(function(state)
         local playerStud = state.playerStud or {}
         playerStud.hasStud = true
         openBattleUI(wildStud, playerStud, state.wildMaxHP or 80, state.playerMaxHP or 80)
+        updateTeamRoster(state.team or {})
         wildEyebrowLbl.Text = trainerMode and ((state.trainerName or "TRAINER"):upper() .. "'S STUD") or "ARENA CHALLENGER"
         if state.log then
             for _, msg in ipairs(state.log) do
@@ -1548,6 +1800,15 @@ StudEvents.BattleState.OnClientEvent:Connect(function(state)
     end
 
     if not isOpen or battleMode ~= "arena" then return end
+
+    if state.team then
+        updateTeamRoster(state.team)
+    end
+
+    -- A switch swapped in a different active stud: repaint the player card
+    if state.playerStud then
+        setPlayerInfo(state.playerStud)
+    end
 
     if state.wildHP and state.wildMaxHP then
         updateWildHP(state.wildHP, state.wildMaxHP)
@@ -1580,6 +1841,29 @@ StudEvents.BattleState.OnClientEvent:Connect(function(state)
         if wildStatusLbl then
             wildStatusLbl.Text = ""
         end
+        actionLocked = false
+        setActionsEnabled(true)
+        return
+    end
+
+    -- Active stud fainted with a live reserve: force a (free) switch
+    if state.action == "force_switch" then
+        setActionsEnabled(false)
+        showSwitchMenu(true)
+        return
+    end
+
+    -- Forced switch resolved: the new stud is in, the player acts next
+    if state.action == "switch_done" then
+        actionLocked = false
+        setActionsEnabled(true)
+        return
+    end
+
+    -- End of a turn (attack exchange, failed catch, or voluntary switch):
+    -- hand control back to the player. Drives the re-enable for switches,
+    -- whose InvokeServer return races the pushed state.
+    if state.action == "turn_update" then
         actionLocked = false
         setActionsEnabled(true)
         return
@@ -1626,38 +1910,35 @@ player:GetAttributeChangedSignal("OpenBattle"):Connect(function()
 end)
 
 -- ─── KEYBOARD SHORTCUTS ────────────────────────────────────────────────
+local NUMBER_KEYS = {
+    [Enum.KeyCode.One] = 1, [Enum.KeyCode.Two] = 2, [Enum.KeyCode.Three] = 3,
+    [Enum.KeyCode.Four] = 4, [Enum.KeyCode.Five] = 5, [Enum.KeyCode.Six] = 6,
+}
+
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe or not isOpen then return end
-    if input.KeyCode == Enum.KeyCode.One then
-        if inBallMode then
-            handleBallSelect(1)
+    local n = NUMBER_KEYS[input.KeyCode]
+    if n then
+        if inSwitchMode then
+            handleSwitchSelect(n)
+        elseif inBallMode then
+            if n <= 3 then handleBallSelect(n) end
         elseif inMoveMode then
-            handleMoveSelect(1)
+            if n <= 4 then handleMoveSelect(n) end
         else
-            handleAttack()
-        end
-    elseif input.KeyCode == Enum.KeyCode.Two then
-        if inBallMode then
-            handleBallSelect(2)
-        elseif inMoveMode then
-            handleMoveSelect(2)
-        else
-            handleCatch()
-        end
-    elseif input.KeyCode == Enum.KeyCode.Three then
-        if inBallMode then
-            handleBallSelect(3)
-        elseif inMoveMode then
-            handleMoveSelect(3)
-        else
-            handleRun()
-        end
-    elseif input.KeyCode == Enum.KeyCode.Four then
-        if inMoveMode then
-            handleMoveSelect(4)
+            -- Normal action bar: 1 Attack · 2 Catch · 3 Studs · 4 Run
+            if n == 1 then handleAttack()
+            elseif n == 2 then handleCatch()
+            elseif n == 3 then handleStuds()
+            elseif n == 4 then handleRun() end
         end
     elseif input.KeyCode == Enum.KeyCode.Escape then
-        if inMoveMode or inBallMode then
+        if inSwitchMode then
+            if not forcedSwitch then
+                hideSwitchMenu()
+                if not actionLocked then setActionsEnabled(true) end
+            end
+        elseif inMoveMode or inBallMode then
             hideMoves()
             if not actionLocked then
                 setActionsEnabled(true)

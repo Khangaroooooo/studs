@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
 local StudData = require(ReplicatedStorage:WaitForChild("StudData"))
+local StoryData = require(ReplicatedStorage:WaitForChild("StoryData"))
 local playerGui = player:WaitForChild("PlayerGui")
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -324,6 +325,22 @@ detailDesc.TextWrapped = true
 detailDesc.TextXAlignment = Enum.TextXAlignment.Left
 detailDesc.TextYAlignment = Enum.TextYAlignment.Top
 detailDesc.Parent = detailPanel
+-- Detail: Story aside — the "these were people" layer (Seven Ways Home).
+-- Only rendered for caught species while Story mode is on; Casual sees
+-- the exact same dex minus this line.
+local detailAside = Instance.new("TextLabel")
+detailAside.Name = "DetailAside"
+detailAside.Size = UDim2.new(1, -20, 0, 34)
+detailAside.Position = UDim2.new(0, 10, 0.45, 52)
+detailAside.BackgroundTransparency = 1
+detailAside.Text = ""
+detailAside.TextColor3 = Color3.fromRGB(215, 190, 130)
+detailAside.Font = Enum.Font.Gotham
+detailAside.TextSize = 11
+detailAside.TextWrapped = true
+detailAside.TextXAlignment = Enum.TextXAlignment.Left
+detailAside.TextYAlignment = Enum.TextYAlignment.Top
+detailAside.Parent = detailPanel
 -- Detail: Type effectiveness
 local detailEffLabel = Instance.new("TextLabel")
 detailEffLabel.Name = "DetailEffectiveness"
@@ -386,6 +403,12 @@ local function showDetail(stud)
 		detailTypeRarity.Text = stud.studType .. " Stud - " .. stud.rarity
 		detailTypeRarity.TextColor3 = StudData.Rarity[stud.rarity] and StudData.Rarity[stud.rarity].color or Color3.fromRGB(180, 180, 180)
 		detailDesc.Text = stud.description
+		local aside = StoryData.DexAsides[stud.id]
+		if aside and player:GetAttribute("StoryMode") ~= false then
+			detailAside.Text = "🖊️ " .. aside
+		else
+			detailAside.Text = ""
+		end
 		-- Show type effectiveness
 		local effs = StudData.TypeEffectiveness[stud.studType] or {}
 		local effText = "Type Effectiveness:\n"
@@ -407,6 +430,7 @@ local function showDetail(stud)
 		detailTypeRarity.Text = "Undiscovered"
 		detailTypeRarity.TextColor3 = Color3.fromRGB(120, 120, 130)
 		detailDesc.Text = "This Stud has not been caught yet. Explore different zones to find it!"
+		detailAside.Text = ""
 		detailEffLabel.Text = ""
 		-- The hint is how players FIND undiscovered studs
 		detailLocation.Text = locationText(stud)

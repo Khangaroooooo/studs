@@ -170,6 +170,47 @@ noSavesLabel.TextSize           = 16
 noSavesLabel.Visible            = false
 noSavesLabel.Parent             = saveListView
 
+-- ─── MODE SELECT (New Game → Story / Casual) ───────────────────────────
+-- Pressing NEW morphs the two buttons into STORY / CASUAL. Story surfaces
+-- the ambient narration ("Seven Ways Home"); Casual is the pure collector
+-- loop. Same game either way, switchable later in Settings.
+
+local modeCaption = Instance.new("TextLabel")
+modeCaption.Name             = "ModeCaption"
+modeCaption.Size             = UDim2.new(1, 0, 0, 30)
+modeCaption.Position         = UDim2.new(0, 0, 0.5, -85)
+modeCaption.BackgroundTransparency = 1
+modeCaption.Text             = "HOW WILL YOU PLAY?"
+modeCaption.TextColor3       = C_WHITE
+modeCaption.Font             = Enum.Font.RobotoMono
+modeCaption.TextSize         = 20
+modeCaption.Visible          = false
+modeCaption.Parent           = container
+
+local modeHint = Instance.new("TextLabel")
+modeHint.Name             = "ModeHint"
+modeHint.Size             = UDim2.new(1, 0, 0, 36)
+modeHint.Position         = UDim2.new(0, 0, 0.5, 45)
+modeHint.BackgroundTransparency = 1
+modeHint.Text             = "STORY — the town remembers you\nCASUAL — pure collecting, no narration"
+modeHint.TextColor3       = C_DIM
+modeHint.Font             = Enum.Font.RobotoMono
+modeHint.TextSize         = 13
+modeHint.Visible          = false
+modeHint.Parent           = container
+
+local modeBackBtn = Instance.new("TextButton")
+modeBackBtn.Name             = "ModeBackBtn"
+modeBackBtn.Size             = UDim2.new(0, 120, 0, 28)
+modeBackBtn.Position         = UDim2.new(0.5, -60, 0.5, 95)
+modeBackBtn.BackgroundTransparency = 1
+modeBackBtn.Text             = "< BACK"
+modeBackBtn.TextColor3       = C_DIM
+modeBackBtn.Font             = Enum.Font.RobotoMono
+modeBackBtn.TextSize         = 16
+modeBackBtn.Visible          = false
+modeBackBtn.Parent           = container
+
 -- ─── ERROR LABEL (max slots, etc.) ─────────────────────────────────────
 
 local errorLabel = Instance.new("TextLabel")
@@ -628,11 +669,38 @@ end
 
 -- ─── BUTTON HANDLERS ──────────────────────────────────────────────────
 
+-- Mode-select state: after NEW is pressed, the same two buttons become
+-- STORY (left, was NEW) and CASUAL (right, was LOAD)
+local chooseMode = false
+
+local function setModeSelect(active)
+	chooseMode = active
+	newBtn.Text = active and "STORY" or "NEW"
+	loadBtn.Text = active and "CASUAL" or "LOAD"
+	modeCaption.Visible = active
+	modeHint.Visible = active
+	modeBackBtn.Visible = active
+end
+
+local function startNewGame(mode)
+	StudEvents.NewGame:FireServer(mode)
+	transitionOut()
+end
+
 loadBtn.MouseButton1Click:Connect(function()
+	if chooseMode then
+		startNewGame("casual")
+		return
+	end
 	showSaveListView()
 end)
 
 newBtn.MouseButton1Click:Connect(function()
+	if chooseMode then
+		startNewGame("story")
+		return
+	end
+
 	-- Check slot count first
 	local slots = StudEvents.RequestSaveSlots:InvokeServer()
 	if slots and #slots >= 10 then
@@ -645,8 +713,18 @@ newBtn.MouseButton1Click:Connect(function()
 		return
 	end
 
-	StudEvents.NewGame:FireServer()
-	transitionOut()
+	setModeSelect(true)
+end)
+
+modeBackBtn.MouseButton1Click:Connect(function()
+	setModeSelect(false)
+end)
+
+modeBackBtn.MouseEnter:Connect(function()
+	modeBackBtn.TextColor3 = C_WHITE
+end)
+modeBackBtn.MouseLeave:Connect(function()
+	modeBackBtn.TextColor3 = C_DIM
 end)
 
 backBtn.MouseButton1Click:Connect(function()

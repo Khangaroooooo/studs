@@ -154,36 +154,130 @@ local function resetChain(player, info)
 	player:SetAttribute("ChainCount", 0)
 end
 
--- Helper: get player's equipped stud
-local function getPlayerEquippedStud(player)
-	local activePlayersData = ServerRegistry.Get("ActivePlayers")
-	local playerInfo = activePlayersData and activePlayersData[player.UserId]
-	if not playerInfo or not playerInfo.data then return nil end
+-- Forward declaration: onPlayerFaint (below) ends the encounter on a loss,
+-- but endEncounter itself is defined further down.
+local endEncounter
 
-	-- Check for explicitly equipped stud first
-	if playerInfo.data.equippedStudId then
-		local studData = StudData.GetStudById(playerInfo.data.equippedStudId)
-		if studData then
-			return studData
-		end
+-- ─── BATTLE TEAM ───────────────────────────────────────────────────────
+-- The encounter is fought by a team of up to MAX_TEAM studs (data.equippedTeam,
+-- lead first). Only the active member fights; the player can Switch to a
+-- reserve (costs the turn) or is forced to send one in when the active faints.
+-- Each member carries its own HP so damage persists across switches.
+local MAX_TEAM = 6
+
+-- Build the per-encounter team from the player's saved roster. Falls back to
+-- the single equipped stud, then the first owned species, matching the old
+-- getPlayerEquippedStud behavior when no team is set.
+local function buildTeam(playerInfo)
+	local ids = {}
+	local team = playerInfo.data.equippedTeam
+	if type(team) == "table" and #team > 0 then
+		for _, id in ipairs(team) do table.insert(ids, id) end
+	elseif playerInfo.data.equippedStudId then
+		ids = { playerInfo.data.equippedStudId }
+	else
+		local first = playerInfo.data.caughtStuds[1]
+		if first then ids = { first.id } end
 	end
 
-	-- Fallback: first unique stud in collection
+	local members = {}
 	local seen = {}
-	for _, caught in ipairs(playerInfo.data.caughtStuds) do
-		if not seen[caught.id] then
-			seen[caught.id] = true
-			local studData = StudData.GetStudById(caught.id)
-			if studData then
-				return studData
+	for _, id in ipairs(ids) do
+		if not seen[id] then
+			seen[id] = true
+			local stud = StudData.GetStudById(id)
+			local entry = getOwnedEntry(playerInfo, id)
+			if stud and entry then
+				local level = entry.level or 1
+				local maxHP = getMaxHP(stud.rarity, level)
+				local held = playerInfo.data.heldItems and playerInfo.data.heldItems[id] or nil
+				table.insert(members, {
+					id = id, stud = stud, entry = entry, level = level,
+					maxHP = maxHP, hp = maxHP, heldItem = held,
+					effects = Combat.GatherEffects(stud, held), fainted = false,
+				})
+				if #members >= MAX_TEAM then break end
 			end
 		end
 	end
-	return nil
+	return members
+end
+
+-- Point the encounter's active-stud fields at team member `idx`
+local function setActiveMember(info, idx)
+	local m = info.team[idx]
+	info.activeIndex = idx
+	info.playerStud = m.stud
+	info.playerEntry = m.entry
+	info.playerLevel = m.level
+	info.playerMaxHP = m.maxHP
+	info.playerHP = m.hp
+	info.playerEffects = m.effects
+end
+
+-- Client-facing snapshot of the team (active HP is the live info.playerHP)
+local function teamSnapshot(info)
+	local out = {}
+	if info.team then
+		for i, m in ipairs(info.team) do
+			local isActive = (i == info.activeIndex)
+			local hp = isActive and info.playerHP or m.hp
+			table.insert(out, {
+				index = i, id = m.id, name = m.stud.name, studType = m.stud.studType,
+				rarity = m.stud.rarity, level = m.level,
+				hp = math.max(0, math.floor(hp)), maxHP = m.maxHP,
+				fainted = m.fainted or hp <= 0, active = isActive,
+			})
+		end
+	end
+	return out
+end
+
+-- Payload describing the active stud (for the client's player card on switch)
+local function activePayload(info)
+	local m = info.team and info.team[info.activeIndex]
+	if not m then return nil end
+	return {
+		id = m.id, name = m.stud.name, studType = m.stud.studType,
+		rarity = m.stud.rarity, level = m.level,
+		exp = m.entry and m.entry.exp or 0, heldItem = m.heldItem,
+	}
+end
+
+-- Any live reserve to fall back on when the active faints?
+local function hasReserve(info)
+	if not info.team then return false end
+	for i, m in ipairs(info.team) do
+		if i ~= info.activeIndex and not m.fainted and m.hp > 0 then
+			return true
+		end
+	end
+	return false
+end
+
+-- Resolve a player faint: if a reserve is alive the battle continues with a
+-- (free) forced switch; otherwise the player loses. Fills `result` and returns
+-- true when the battle continues, false when it ended in a loss.
+local function onPlayerFaint(player, info, result)
+	if info.team and info.team[info.activeIndex] then
+		info.team[info.activeIndex].fainted = true
+		info.team[info.activeIndex].hp = 0
+	end
+	if hasReserve(info) then
+		info.pendingSwitch = true
+		result.result = "force_switch"
+		result.team = teamSnapshot(info)
+		return true
+	end
+	result.result = "player_fainted"
+	result.coinsLost = applyFaintPenalty(player, info)
+	resetChain(player, info)
+	endEncounter(player)
+	return false
 end
 
 -- Helper: end encounter and unfreeze player
-local function endEncounter(player)
+function endEncounter(player)
 	local info = playerEncounters[player.UserId]
 	if info then
 		info.inEncounter = false
@@ -202,6 +296,9 @@ local function endEncounter(player)
 		info.lastTapAt = nil
 		info.ballMult = nil
 		info.wildStatus = nil
+		info.team = nil
+		info.activeIndex = nil
+		info.pendingSwitch = nil
 
 		local character = player.Character
 		if character then
@@ -402,20 +499,27 @@ local function pollPlayer(player)
 				info.inEncounter = true
 				info.totalEncounters = info.totalEncounters + 1
 
-				-- Get player's equipped stud + its level first (wild level scales off it)
-				local playerStud = getPlayerEquippedStud(player)
-				local playerLevel = 1
+				-- Build the battle team (lead first). The active member drives the
+				-- wild-level scaling and all the existing single-stud fields.
+				local playerStud, playerLevel = nil, 1
 				local playerHeldItem = nil
 				do
 					local apd = ServerRegistry.Get("ActivePlayers")
 					local pInfo = apd and apd[player.UserId]
-					if playerStud and pInfo and pInfo.data then
-						playerHeldItem = pInfo.data.heldItems and pInfo.data.heldItems[playerStud.id] or nil
-						local entry = getOwnedEntry(pInfo, playerStud.id)
-						if entry then
-							playerLevel = entry.level
-							info.playerEntry = entry
+					if pInfo and pInfo.data then
+						info.team = buildTeam(pInfo)
+						info.activeIndex = 1
+						info.pendingSwitch = nil
+						local active = info.team[1]
+						if active then
+							playerStud = active.stud
+							playerLevel = active.level
+							playerHeldItem = active.heldItem
+							info.playerEntry = active.entry
 						end
+					else
+						info.team = nil
+						info.activeIndex = nil
 					end
 				end
 				-- Wild level comes from the WORLD's level band
@@ -439,17 +543,17 @@ local function pollPlayer(player)
 				info.isShiny = isShiny
 				info.catchStartedAt = nil
 
-				info.playerStud = playerStud
-				if playerStud then
-					info.playerMaxHP = getMaxHP(playerStud.rarity, playerLevel)
-					info.playerHP = info.playerMaxHP
+				-- Load the lead as the active stud (HP/effects come from the
+				-- prebuilt member so switches preserve damage). Passive effects
+				-- were resolved per-member in buildTeam.
+				if info.team and info.team[1] then
+					setActiveMember(info, 1)
 				else
+					info.playerStud = nil
 					info.playerMaxHP = 0
 					info.playerHP = 0
+					info.playerEffects = nil
 				end
-				-- Passive effects (ability + held item), resolved once per
-				-- encounter. Wild studs carry no item but keep their ability.
-				info.playerEffects = playerStud and Combat.GatherEffects(playerStud, playerHeldItem) or nil
 				info.wildEffects = Combat.GatherEffects(stud, nil)
 
 				-- SPEED: a faster wild stud gets a free opening
@@ -504,6 +608,7 @@ local function pollPlayer(player)
 					encounterData.playerMaxHP = info.playerMaxHP
 					encounterData.playerHP = info.playerHP
 					encounterData.firstStrike = firstStrike
+					encounterData.team = teamSnapshot(info)
 				end
 
 				encounterStartEvent:FireClient(player, encounterData)
@@ -558,6 +663,11 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 	end
 	local moveIndex = type(arg) == "number" and arg or nil
 	local requestedBallId = type(arg) == "string" and arg or nil
+
+	-- While a faint is pending, the only legal move is sending in a reserve
+	if info.pendingSwitch and action ~= "Switch" then
+		return { success = false, reason = "must_switch" }
+	end
 
 	if action == "Attack" then
 		if not info.playerStud then
@@ -663,13 +773,59 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 		result.playerMaxHP = info.playerMaxHP
 
 		if info.playerHP <= 0 then
-			result.result = "player_fainted"
-			result.coinsLost = applyFaintPenalty(player, info)
-			resetChain(player, info)
-			endEncounter(player)
+			onPlayerFaint(player, info, result)
 			return result
 		end
 
+		return result
+
+	elseif action == "Switch" then
+		-- Swap the active stud for a team reserve. A voluntary switch costs the
+		-- turn (the wild gets a free hit); a forced switch after a faint is free
+		-- (info.pendingSwitch).
+		if not info.team or #info.team <= 1 then
+			return { success = false, reason = "no_team" }
+		end
+		local targetIdx = moveIndex
+		local target = targetIdx and info.team[targetIdx]
+		if not target or targetIdx == info.activeIndex or target.fainted or target.hp <= 0 then
+			return { success = false, reason = "invalid_switch" }
+		end
+
+		local forced = info.pendingSwitch
+		-- Persist the outgoing stud's current HP before swapping the target in
+		if not forced and info.team[info.activeIndex] then
+			info.team[info.activeIndex].hp = info.playerHP
+		end
+		setActiveMember(info, targetIdx)
+		info.pendingSwitch = nil
+
+		local result = {
+			success = true,
+			action = "Switch",
+			switchedTo = activePayload(info),
+			playerHP = info.playerHP,
+			playerMaxHP = info.playerMaxHP,
+			team = teamSnapshot(info),
+		}
+
+		-- Forced (post-faint) switch: free, the player acts next
+		if forced then
+			return result
+		end
+
+		-- Voluntary switch: the wild gets its free hit
+		local wildDmg, wildCrit, wildEff = wildAttack(info)
+		info.playerHP = math.max(0, info.playerHP - wildDmg)
+		result.wildDmg = wildDmg
+		result.wildCrit = wildCrit
+		result.wildEffectiveness = wildEff
+		result.playerHP = info.playerHP
+		if info.playerHP <= 0 then
+			onPlayerFaint(player, info, result)
+		else
+			result.team = teamSnapshot(info)
+		end
 		return result
 
 	elseif action == "Run" then
@@ -705,10 +861,7 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 			playerMaxHP = info.playerMaxHP,
 		}
 		if info.playerHP <= 0 then
-			result.result = "player_fainted"
-			result.coinsLost = applyFaintPenalty(player, info)
-			resetChain(player, info)
-			endEncounter(player)
+			onPlayerFaint(player, info, result)
 		end
 		return result
 
@@ -873,9 +1026,7 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 		}
 
 		if info.playerHP <= 0 then
-			result.result = "player_fainted"
-			result.coinsLost = applyFaintPenalty(player, info)
-			endEncounter(player)
+			onPlayerFaint(player, info, result)
 			return result
 		end
 

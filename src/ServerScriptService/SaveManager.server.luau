@@ -336,11 +336,14 @@ local function createNewSaveData()
 		lastSaved = os.time(),
 		evoPoints = {},
 		equippedStudId = nil,
+		equippedTeam = {}, -- ordered battle team (≤ MAX_TEAM); [1] is the lead
 		lastDailyReward = 0,
 		dailyStreak = 0,
 		shinyStuds = {},
 		grantedReceipts = {}, -- [PurchaseId] = true; dev-product receipts already granted (ProcessReceipt idempotency)
 		lastPosition = nil,
+		storyMode = true, -- Story vs Casual; picked on New Game, switchable in Settings
+		story = { seen = {}, worldCatches = {}, ending = nil }, -- StorySystem's namespace (beats fired, per-world catch counts, ending choice)
 	}
 end
 
@@ -409,6 +412,37 @@ local function bumpSpeciesCount(data, studId, delta)
 	local counts = getSpeciesCounts(data)
 	local n = (counts[studId] or 0) + delta
 	counts[studId] = n > 0 and n or nil
+end
+
+-- ─── EQUIPPED TEAM ─────────────────────────────────────────────────────
+-- Players field a battle team of up to MAX_TEAM species. equippedTeam is the
+-- ordered roster; equippedStudId always mirrors the lead (team[1]) so every
+-- system that predates teams (companion, PvP, profile, encounter fallback)
+-- keeps working off a single "representative" stud with no changes.
+local MAX_TEAM = 6
+
+-- Keep equippedTeam self-consistent after any collection/equip mutation:
+-- drop unowned species and duplicates, cap at MAX_TEAM, and re-point
+-- equippedStudId at the lead. Also migrates legacy saves that only stored
+-- equippedStudId (seeds the team from it on first touch).
+local function normalizeTeam(data)
+	local counts = getSpeciesCounts(data)
+	local team = data.equippedTeam
+	if type(team) ~= "table" then
+		team = {}
+		if data.equippedStudId then team[1] = data.equippedStudId end
+	end
+	local seen, cleaned = {}, {}
+	for _, id in ipairs(team) do
+		if type(id) == "string" and not seen[id] and (counts[id] or 0) >= 1 then
+			seen[id] = true
+			cleaned[#cleaned + 1] = id
+			if #cleaned >= MAX_TEAM then break end
+		end
+	end
+	data.equippedTeam = cleaned
+	data.equippedStudId = cleaned[1]
+	return cleaned
 end
 
 -- Push the stat attributes every other system reads (HUD, leaderboards,
@@ -585,8 +619,9 @@ local function persistActiveSlotBeforeSwitch(player)
 	end
 end
 
--- New Game: auto-assign the next available slot
-StudEvents.NewGame.OnServerEvent:Connect(function(player)
+-- New Game: auto-assign the next available slot. mode is "story" (default)
+-- or "casual" — the menu's Story/Casual pick after pressing New Game.
+StudEvents.NewGame.OnServerEvent:Connect(function(player, mode)
 	if not claimSessionLock(player.UserId) then
 		player:Kick("Your save data is still active on another server. Please rejoin in a couple of minutes.")
 		return
@@ -614,6 +649,7 @@ StudEvents.NewGame.OnServerEvent:Connect(function(player)
 	end
 
 	local newData = createNewSaveData()
+	newData.storyMode = mode ~= "casual"
 
 	table.insert(slotList.slots, {
 		slotId = nextSlotId,
@@ -636,6 +672,7 @@ StudEvents.NewGame.OnServerEvent:Connect(function(player)
 	-- StarterChosen=false holds back the tutorial and the rest of the HUD
 	-- (see UIGate) so the starter pick is the ONLY thing on screen first
 	player:SetAttribute("StarterChosen", false)
+	player:SetAttribute("StoryMode", newData.storyMode)
 	player:SetAttribute("GameStarted", true)
 
 	-- Brand-new save: offer the starter pick (Gary/Susan/Terry)
@@ -664,6 +701,9 @@ StudEvents.LoadGame.OnServerEvent:Connect(function(player, slotId)
 		-- Force-rebuild the species-count cache on load so a stale persisted
 		-- copy can never drift from the actual collection
 		rebuildSpeciesCounts(data)
+		-- Migrate/repair the equipped team (seeds from a legacy equippedStudId,
+		-- drops anything no longer owned) before attributes are synced
+		normalizeTeam(data)
 		syncPlayerAttributes(player, data)
 		restorePlayerPosition(player, data.lastPosition)
 		-- Loaded games never re-show the tutorial (old saves without the
@@ -673,6 +713,8 @@ StudEvents.LoadGame.OnServerEvent:Connect(function(player, slotId)
 		-- re-offered — but only while the collection is still empty
 		local needsStarter = not data.starterChosen and #(data.caughtStuds or {}) == 0
 		player:SetAttribute("StarterChosen", not needsStarter)
+		-- Saves from before story mode existed default to Story (nil ~= false)
+		player:SetAttribute("StoryMode", data.storyMode ~= false)
 		player:SetAttribute("GameStarted", true)
 		player:SetAttribute("DexTitle", data.equippedTitle)
 		if needsStarter then
@@ -930,6 +972,9 @@ ServerRegistry.Register("GrantCatch", function(player, studId, opts)
 		ServerRegistry.Call("OnStudCaught", player, studId)
 		ServerRegistry.Call("OnCatchResolved", player, true)
 	end
+	-- Story beats fire on EVERY grant (purchases included — the starter is
+	-- the "first neighbor you remember"); StorySystem no-ops in Casual mode
+	ServerRegistry.Call("OnStoryCatch", player, studId, not alreadyCaught, opts.purchase == true)
 	task.defer(function()
 		ServerRegistry.Call("CheckMilestones", player)
 		checkDexMilestones(player)
@@ -1016,9 +1061,8 @@ ServerRegistry.Register("ExecuteTrade", function(playerA, playerB, offersA, offe
 	for _, pair in ipairs({ { playerA, infoA }, { playerB, infoB } }) do
 		local plr, inf = pair[1], pair[2]
 		local counts = rebuildSpeciesCounts(inf.data)
-		if inf.data.equippedStudId and (counts[inf.data.equippedStudId] or 0) < 1 then
-			inf.data.equippedStudId = nil
-		end
+		-- Drop any traded-away species from the team and re-point the lead
+		normalizeTeam(inf.data)
 		-- Held items belong to the owner (keyed by species, not traded with the
 		-- creature); trading away a species' last copy frees its item to the pool.
 		if inf.data.heldItems then
@@ -1084,9 +1128,10 @@ StudEvents.RequestCollection.OnServerInvoke = function(player)
 		return playerInfo.data.caughtStuds,
 			playerInfo.data.equippedStudId,
 			playerInfo.data.heldItems or {},
-			playerInfo.data.items or {}
+			playerInfo.data.items or {},
+			playerInfo.data.equippedTeam or {}
 	end
-	return {}, nil, {}, {}
+	return {}, nil, {}, {}, {}
 end
 
 StudEvents.GetPlayerStats.OnServerInvoke = function(player)
@@ -1125,10 +1170,53 @@ StudEvents.EquipStud.OnServerInvoke = function(player, studId)
 		return { success = false, reason = "not_owned" }
 	end
 
-	playerInfo.data.equippedStudId = studId
-	player:SetAttribute("EquippedStud", studId)
-	setSlotData(player.UserId, playerInfo.activeSlot, playerInfo.data)
-	return { success = true, studId = studId }
+	-- "Equip" now means "make this the team lead": ensure the species is on the
+	-- team and move it to the front. If the team is already full and this stud
+	-- isn't on it, the current lead is bumped to make room.
+	local data = playerInfo.data
+	normalizeTeam(data)
+	local team = data.equippedTeam
+	for i = #team, 1, -1 do
+		if team[i] == studId then table.remove(team, i) end
+	end
+	table.insert(team, 1, studId)
+	if #team > MAX_TEAM then table.remove(team, 2) end
+	normalizeTeam(data)
+
+	player:SetAttribute("EquippedStud", data.equippedStudId)
+	setSlotData(player.UserId, playerInfo.activeSlot, data)
+	return { success = true, studId = studId, team = data.equippedTeam }
+end
+
+-- Add or remove a species from the battle team (≤ MAX_TEAM). Toggling the
+-- current lead off promotes the next member; the InventoryUI drives this.
+StudEvents.ToggleTeamMember.OnServerInvoke = function(player, studId)
+	if type(studId) ~= "string" then return { success = false, reason = "invalid" } end
+	local playerInfo = activePlayers[player.UserId]
+	if not playerInfo or not playerInfo.data then
+		return { success = false, reason = "no_data" }
+	end
+	local data = playerInfo.data
+	if (getSpeciesCounts(data)[studId] or 0) < 1 then
+		return { success = false, reason = "not_owned" }
+	end
+
+	normalizeTeam(data)
+	local team = data.equippedTeam
+	local idx = table.find(team, studId)
+	if idx then
+		table.remove(team, idx)
+	else
+		if #team >= MAX_TEAM then
+			return { success = false, reason = "team_full", team = team, lead = data.equippedStudId }
+		end
+		table.insert(team, studId)
+	end
+	normalizeTeam(data)
+
+	player:SetAttribute("EquippedStud", data.equippedStudId)
+	setSlotData(player.UserId, playerInfo.activeSlot, data)
+	return { success = true, team = data.equippedTeam, lead = data.equippedStudId }
 end
 
 -- Equip / swap / unequip a held item on a species' one slot. itemId nil or ""
@@ -1228,10 +1316,9 @@ StudEvents.SellStud.OnServerEvent:Connect(function(player, studId)
 		end
 	end
 
-	if playerInfo.data.equippedStudId == studId then
-		playerInfo.data.equippedStudId = nil
-		player:SetAttribute("EquippedStud", nil)
-	end
+	-- Drop the species from the team if that was its last copy (normalizeTeam
+	-- also re-points the lead); the attribute is refreshed by syncPlayerAttributes.
+	normalizeTeam(playerInfo.data)
 
 	setSlotData(player.UserId, playerInfo.activeSlot, playerInfo.data)
 	StudEvents.UpdateCoins:FireClient(player, playerInfo.data.coins)
@@ -1302,14 +1389,18 @@ StudEvents.EvolveStud.OnServerInvoke = function(player, studId, targetId)
 	})
 	bumpSpeciesCount(playerInfo.data, evolution.id, 1)
 
-	-- If the evolved copy was the last of its species and it was equipped,
-	-- carry the equip over to the new form (otherwise the equip would point
-	-- at a species the player no longer owns)
-	if playerInfo.data.equippedStudId == studId
-		and (getSpeciesCounts(playerInfo.data)[studId] or 0) < 1
-	then
-		playerInfo.data.equippedStudId = evolution.id
+	-- If the evolved copy was the last of its species, carry any team slot(s)
+	-- over to the new form in place (otherwise normalizeTeam would just drop the
+	-- now-unowned species and shrink the team)
+	if (getSpeciesCounts(playerInfo.data)[studId] or 0) < 1 then
+		local team = playerInfo.data.equippedTeam
+		if type(team) == "table" then
+			for i, id in ipairs(team) do
+				if id == studId then team[i] = evolution.id end
+			end
+		end
 	end
+	normalizeTeam(playerInfo.data)
 
 	-- Carry the held item onto the evolved form when the old species is gone.
 	-- If the evolution's type breaks the item's typeLock, free it to the pool
@@ -1383,8 +1474,9 @@ chooseStarterFunc.OnServerInvoke = function(player, starterId)
 		data.starterChosen = nil
 		return { success = false, reason = "grant_failed" }
 	end
-	data.equippedStudId = starterId
-	player:SetAttribute("EquippedStud", starterId)
+	data.equippedTeam = { starterId }
+	normalizeTeam(data)
+	player:SetAttribute("EquippedStud", data.equippedStudId)
 	-- Unlocks the tutorial + HUD (UIGate) now that the pick is done
 	player:SetAttribute("StarterChosen", true)
 	syncPlayerAttributes(player, data)
