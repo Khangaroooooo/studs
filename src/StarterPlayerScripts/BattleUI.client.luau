@@ -80,8 +80,13 @@ local inSwitchMode   = false -- the Studs switch panel is open
 local forcedSwitch   = false -- active stud fainted; a switch is mandatory
 local teamRoster     = {}    -- [{index,id,name,studType,rarity,level,hp,maxHP,fainted,active}]
 
-local wildInfo  = { name = "?", studType = "Fire", rarity = "Common" }
-local pInfo     = { name = "?", studType = "Fire", rarity = "Common" }
+-- Battle-card payloads: the server's ActivePayload plus client-side additions
+-- (hasStud, colorR/G/B, isShiny). The shape differs per call site, so these
+-- are deliberately loose -- the literals below are only pre-battle placeholders.
+type CardInfo = { [string]: any }
+
+local wildInfo: CardInfo = { name = "?", studType = "Fire", rarity = "Common" }
+local pInfo: CardInfo    = { name = "?", studType = "Fire", rarity = "Common" }
 local wMaxHP    = 100
 local wCurHP    = 100
 local pMaxHP    = 100
@@ -107,8 +112,9 @@ local pNameLbl, pEyebrowLbl, pHPFill, pHPTxt
 local pExpFill, pExpTxt
 local wildBadgeHolder, pBadgeHolder
 local wildGemHolder, pGemHolder
-local wildStatFills, pStatFills = {}, {}
-local wildStatTxts, pStatTxts = {}, {}
+-- Keyed "atk"/"def"/"spd"; mkStatRow fills these in as it builds each card
+local wildStatFills: { [string]: Frame }, pStatFills: { [string]: Frame } = {}, {}
+local wildStatTxts: { [string]: TextLabel }, pStatTxts: { [string]: TextLabel } = {}, {}
 local wildStatusLbl -- 🔥/❄️/⚡ badge next to the wild's VITALITY label
 local logLabels = {}
 local bottomFrame, catchFrame

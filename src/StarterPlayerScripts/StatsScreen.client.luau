@@ -60,6 +60,10 @@ local stats = {
     xpNeeded    = 5,
 }
 
+-- Cached UI references, deliberately kept out of `stats` so the data model
+-- above keeps its exact type and a typo in e.g. stats.coins stays an error.
+local view: { [string]: any } = {}
+
 -- ─── WALKSPEED LOCK (via UIManager) ──────────────────────────────────────
 local function lockWalk()
     UIManager.AcquireLock()
@@ -369,9 +373,9 @@ local function buildStatsScreen()
     xpFill.Parent           = xpBarBg
 
     -- Store references for updating
-    stats._gridFrame = gridFrame
-    stats._xpLbl     = xpSection:FindFirstChild("XPLbl")
-    stats._xpFill    = xpFill
+    view.gridFrame = gridFrame
+    view.xpLbl     = xpSection:FindFirstChild("XPLbl")
+    view.xpFill    = xpFill
 end
 
 -- ─── FETCH STATS FROM SERVER ──────────────────────────────────────────
@@ -396,8 +400,8 @@ end
 -- ─── UPDATE DISPLAY ────────────────────────────────────────────────────
 local function updateDisplay()
     -- Update stat tile values
-    if stats._gridFrame then
-        local tiles = stats._gridFrame:GetChildren()
+    if view.gridFrame then
+        local tiles = view.gridFrame:GetChildren()
         for _, tile in ipairs(tiles) do
             if tile:IsA("Frame") then
                 local valLbl = tile:FindFirstChild("Val")
@@ -417,12 +421,12 @@ local function updateDisplay()
     end
 
     -- Update XP bar
-    if stats._xpLbl then
-        stats._xpLbl.Text = "XP: " .. stats.xpCurrent .. " / " .. stats.xpNeeded
+    if view.xpLbl then
+        view.xpLbl.Text = "XP: " .. stats.xpCurrent .. " / " .. stats.xpNeeded
     end
-    if stats._xpFill then
+    if view.xpFill then
         local ratio = math.clamp(stats.xpCurrent / math.max(stats.xpNeeded, 1), 0, 1)
-        stats._xpFill.Size = UDim2.new(ratio, 0, 1, 0)
+        view.xpFill.Size = UDim2.new(ratio, 0, 1, 0)
     end
 end
 
