@@ -306,9 +306,39 @@ local function hydrateQuestState(player)
 
 	local saved = playerInfo.data.questState
 	if saved then
-		state.activeQuests = saved.activeQuests or {}
-		state.completedQuests = saved.completedQuests or {}
-		state.progress = saved.progress or {}
+		-- Drop ids that aren't real quests. Saves written before the accept
+		-- handler validated its input can carry junk ids that no longer match
+		-- any template; left in place they'd sit in activeQuests forever
+		-- (nothing can complete them) and hold an active-quest slot.
+		--
+		-- Sanitize IN PLACE. state.* must stay aliased to the saved tables:
+		-- checkQuestProgress writes state.progress[questId] without calling
+		-- persistQuestState on the non-completing path, so it relies on those
+		-- being the same tables the autosave reads. Rebinding to fresh tables
+		-- here would silently stop ordinary progress from being saved.
+		saved.activeQuests = saved.activeQuests or {}
+		for i = #saved.activeQuests, 1, -1 do
+			local questId = saved.activeQuests[i]
+			if type(questId) ~= "string" or not QUEST_BY_ID[questId] then
+				table.remove(saved.activeQuests, i)
+			end
+		end
+		saved.completedQuests = saved.completedQuests or {}
+		for questId in pairs(saved.completedQuests) do
+			if type(questId) ~= "string" or not QUEST_BY_ID[questId] then
+				saved.completedQuests[questId] = nil
+			end
+		end
+		saved.progress = saved.progress or {}
+		for questId, value in pairs(saved.progress) do
+			if type(questId) ~= "string" or not QUEST_BY_ID[questId] or type(value) ~= "number" then
+				saved.progress[questId] = nil
+			end
+		end
+
+		state.activeQuests = saved.activeQuests
+		state.completedQuests = saved.completedQuests
+		state.progress = saved.progress
 	else
 		playerInfo.data.questState = {
 			activeQuests = state.activeQuests,
@@ -476,7 +506,14 @@ questEvent.OnServerEvent:Connect(function(player, data)
 
 	if data.action == "accept" then
 		local questId = data.questId
-		if not questId then return end
+		-- Must be a REAL quest id, not merely truthy. An unvalidated id reaches
+		-- state.progress[questId] below, which is persisted into the save: a
+		-- table or number key there makes the DataStore write throw (non-string
+		-- / mixed keys don't serialize), so every later autosave for that player
+		-- fails and their whole save — not just quests — stops persisting. It
+		-- also permanently consumes one of the 3 active-quest slots, because a
+		-- junk id can never complete and there is no abandon path.
+		if type(questId) ~= "string" or not QUEST_BY_ID[questId] then return end
 
 		local state = playerQuests[player.UserId]
 		if not state then return end
