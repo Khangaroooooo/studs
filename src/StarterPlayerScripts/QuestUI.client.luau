@@ -80,7 +80,7 @@ titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.TextColor3 = GOLD
 titleLabel.TextSize = 22
-titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Font = Enum.Font.Arcade
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = header
 
@@ -92,7 +92,7 @@ closeBtn.Position = UDim2.new(1, -44, 0, 7)
 closeBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextSize = 18
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Font = Enum.Font.Arcade
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = header
 
@@ -123,7 +123,7 @@ for i, tabName in ipairs(tabs) do
     btn.BackgroundColor3 = (tabName == currentTab) and ACCENT or Color3.fromRGB(50, 50, 65)
     btn.TextColor3 = TEXT_COLOR
     btn.TextSize = 12
-    btn.Font = Enum.Font.GothamBold
+    btn.Font = Enum.Font.Arcade
     btn.Text = tabName
     btn.BorderSizePixel = 0
     btn.LayoutOrder = i
@@ -200,7 +200,7 @@ toggleBtn.BackgroundTransparency = 0.25
 toggleBtn.TextColor3 = GOLD
 toggleBtn.TextSize = 22
 toggleBtn.Text = "📜"
-toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Font = Enum.Font.Arcade
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Parent = screenGui
 
@@ -238,7 +238,7 @@ notifLabel.Position = UDim2.new(0, 16, 0, 8)
 notifLabel.BackgroundTransparency = 1
 notifLabel.TextColor3 = GOLD
 notifLabel.TextSize = 16
-notifLabel.Font = Enum.Font.GothamBold
+notifLabel.Font = Enum.Font.Arcade
 notifLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
 notifLabel.TextStrokeTransparency = 0.8
 notifLabel.Text = "Quest Complete!"
@@ -251,7 +251,7 @@ notifDetail.Position = UDim2.new(0, 16, 0, 34)
 notifDetail.BackgroundTransparency = 1
 notifDetail.TextColor3 = TEXT_COLOR
 notifDetail.TextSize = 13
-notifDetail.Font = Enum.Font.Gotham
+notifDetail.Font = Enum.Font.Arcade
 notifDetail.TextStrokeColor3 = Color3.new(0, 0, 0)
 notifDetail.TextStrokeTransparency = 0.85
 notifDetail.Text = ""
@@ -275,7 +275,7 @@ local function createActiveCard(quest, order)
     nameLbl.BackgroundTransparency = 1
     nameLbl.TextColor3 = TEXT_COLOR
     nameLbl.TextSize = 14
-    nameLbl.Font = Enum.Font.GothamBold
+    nameLbl.Font = Enum.Font.Arcade
     nameLbl.Text = quest.name
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left
     nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -287,7 +287,7 @@ local function createActiveCard(quest, order)
     descLbl.BackgroundTransparency = 1
     descLbl.TextColor3 = Color3.fromRGB(180, 180, 180)
     descLbl.TextSize = 11
-    descLbl.Font = Enum.Font.Gotham
+    descLbl.Font = Enum.Font.Arcade
     descLbl.Text = quest.description or ""
     descLbl.TextXAlignment = Enum.TextXAlignment.Left
     descLbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -320,7 +320,7 @@ local function createActiveCard(quest, order)
     progressLbl.BackgroundTransparency = 1
     progressLbl.TextColor3 = TEXT_COLOR
     progressLbl.TextSize = 10
-    progressLbl.Font = Enum.Font.GothamBold
+    progressLbl.Font = Enum.Font.Arcade
     progressLbl.Text = progress .. "/" .. target
     progressLbl.Parent = progressBg
 
@@ -331,7 +331,7 @@ local function createActiveCard(quest, order)
     rewardLbl.BackgroundTransparency = 1
     rewardLbl.TextColor3 = GOLD
     rewardLbl.TextSize = 12
-    rewardLbl.Font = Enum.Font.GothamBold
+    rewardLbl.Font = Enum.Font.Arcade
     rewardLbl.Text = "💰 " .. quest.reward .. " coins"
     rewardLbl.TextXAlignment = Enum.TextXAlignment.Left
     rewardLbl.Parent = card
@@ -343,7 +343,7 @@ local function createActiveCard(quest, order)
     npcLbl.BackgroundTransparency = 1
     npcLbl.TextColor3 = Color3.fromRGB(160, 160, 180)
     npcLbl.TextSize = 11
-    npcLbl.Font = Enum.Font.Gotham
+    npcLbl.Font = Enum.Font.Arcade
     npcLbl.Text = "From: " .. (quest.npc or "?")
     npcLbl.TextXAlignment = Enum.TextXAlignment.Right
     npcLbl.Parent = card
@@ -367,7 +367,7 @@ local function createAvailableCard(quest, order)
     nameLbl.BackgroundTransparency = 1
     nameLbl.TextColor3 = TEXT_COLOR
     nameLbl.TextSize = 14
-    nameLbl.Font = Enum.Font.GothamBold
+    nameLbl.Font = Enum.Font.Arcade
     nameLbl.Text = quest.name
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left
     nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -379,7 +379,7 @@ local function createAvailableCard(quest, order)
     descLbl.BackgroundTransparency = 1
     descLbl.TextColor3 = Color3.fromRGB(180, 180, 200)
     descLbl.TextSize = 11
-    descLbl.Font = Enum.Font.Gotham
+    descLbl.Font = Enum.Font.Arcade
     descLbl.Text = quest.description or ""
     descLbl.TextXAlignment = Enum.TextXAlignment.Left
     descLbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -392,7 +392,7 @@ local function createAvailableCard(quest, order)
     rewardLbl.BackgroundTransparency = 1
     rewardLbl.TextColor3 = GOLD
     rewardLbl.TextSize = 12
-    rewardLbl.Font = Enum.Font.GothamBold
+    rewardLbl.Font = Enum.Font.Arcade
     rewardLbl.Text = "💰 " .. quest.reward .. " coins"
     rewardLbl.TextXAlignment = Enum.TextXAlignment.Left
     rewardLbl.Parent = card
@@ -404,7 +404,7 @@ local function createAvailableCard(quest, order)
     acceptBtn.BackgroundColor3 = Color3.fromRGB(60, 160, 80)
     acceptBtn.TextColor3 = TEXT_COLOR
     acceptBtn.TextSize = 13
-    acceptBtn.Font = Enum.Font.GothamBold
+    acceptBtn.Font = Enum.Font.Arcade
     acceptBtn.Text = "Accept"
     acceptBtn.BorderSizePixel = 0
     acceptBtn.Parent = card
@@ -443,7 +443,7 @@ local function createCompletedCard(quest, order)
     lbl.BackgroundTransparency = 1
     lbl.TextColor3 = Color3.fromRGB(160, 160, 160)
     lbl.TextSize = 12
-    lbl.Font = Enum.Font.Gotham
+    lbl.Font = Enum.Font.Arcade
     lbl.Text = "✅ " .. questName
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -479,7 +479,7 @@ local function createDailyCard(quest, order)
     nameLbl.BackgroundTransparency = 1
     nameLbl.TextColor3 = quest.done and Color3.fromRGB(190, 190, 190) or GOLD
     nameLbl.TextSize = 14
-    nameLbl.Font = Enum.Font.GothamBold
+    nameLbl.Font = Enum.Font.Arcade
     nameLbl.Text = (quest.done and "✅ " or "") .. quest.name
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left
     nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -491,7 +491,7 @@ local function createDailyCard(quest, order)
     descLbl.BackgroundTransparency = 1
     descLbl.TextColor3 = Color3.fromRGB(200, 195, 180)
     descLbl.TextSize = 11
-    descLbl.Font = Enum.Font.Gotham
+    descLbl.Font = Enum.Font.Arcade
     descLbl.Text = quest.desc or ""
     descLbl.TextXAlignment = Enum.TextXAlignment.Left
     descLbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -517,7 +517,7 @@ local function createDailyCard(quest, order)
     progressLbl.BackgroundTransparency = 1
     progressLbl.TextColor3 = TEXT_COLOR
     progressLbl.TextSize = 10
-    progressLbl.Font = Enum.Font.GothamBold
+    progressLbl.Font = Enum.Font.Arcade
     progressLbl.Text = math.min(progress, target) .. "/" .. target
     progressLbl.Parent = progressBg
 
@@ -527,7 +527,7 @@ local function createDailyCard(quest, order)
     rewardLbl.BackgroundTransparency = 1
     rewardLbl.TextColor3 = GOLD
     rewardLbl.TextSize = 12
-    rewardLbl.Font = Enum.Font.GothamBold
+    rewardLbl.Font = Enum.Font.Arcade
     rewardLbl.Text = "💰 " .. (quest.reward or 0) .. " coins"
     rewardLbl.TextXAlignment = Enum.TextXAlignment.Left
     rewardLbl.Parent = card
@@ -548,7 +548,7 @@ function refreshContent()
             emptyLbl.BackgroundTransparency = 1
             emptyLbl.TextColor3 = Color3.fromRGB(140, 140, 160)
             emptyLbl.TextSize = 14
-            emptyLbl.Font = Enum.Font.Gotham
+            emptyLbl.Font = Enum.Font.Arcade
             emptyLbl.Text = "Daily quests unlock\nonce your game loads!"
             emptyLbl.Parent = scrollFrame
         else
@@ -560,7 +560,7 @@ function refreshContent()
             headerLbl.BackgroundTransparency = 1
             headerLbl.TextColor3 = daily.bonusClaimed and PROGRESS_FILL or Color3.fromRGB(180, 180, 200)
             headerLbl.TextSize = 11
-            headerLbl.Font = Enum.Font.Gotham
+            headerLbl.Font = Enum.Font.Arcade
             headerLbl.LayoutOrder = 0
             headerLbl.Text = daily.bonusClaimed
                 and ("🎉 All dailies done! New quests in " .. hours .. "h " .. mins .. "m")
@@ -579,7 +579,7 @@ function refreshContent()
             emptyLbl.BackgroundTransparency = 1
             emptyLbl.TextColor3 = Color3.fromRGB(140, 140, 160)
             emptyLbl.TextSize = 14
-            emptyLbl.Font = Enum.Font.Gotham
+            emptyLbl.Font = Enum.Font.Arcade
             emptyLbl.Text = "No active quests.\nCheck Available tab!"
             emptyLbl.Parent = scrollFrame
         else
@@ -595,7 +595,7 @@ function refreshContent()
             emptyLbl.BackgroundTransparency = 1
             emptyLbl.TextColor3 = Color3.fromRGB(140, 140, 160)
             emptyLbl.TextSize = 14
-            emptyLbl.Font = Enum.Font.Gotham
+            emptyLbl.Font = Enum.Font.Arcade
             emptyLbl.Text = "No quests available.\nComplete your active ones first!"
             emptyLbl.Parent = scrollFrame
         else
@@ -611,7 +611,7 @@ function refreshContent()
             emptyLbl.BackgroundTransparency = 1
             emptyLbl.TextColor3 = Color3.fromRGB(140, 140, 160)
             emptyLbl.TextSize = 14
-            emptyLbl.Font = Enum.Font.Gotham
+            emptyLbl.Font = Enum.Font.Arcade
             emptyLbl.Text = "No completed quests yet.\nKeep catching Studs!"
             emptyLbl.Parent = scrollFrame
         else
@@ -645,7 +645,7 @@ local function updateTracker()
     headerLbl.BackgroundTransparency = 1
     headerLbl.TextColor3 = GOLD
     headerLbl.TextSize = 11
-    headerLbl.Font = Enum.Font.GothamBold
+    headerLbl.Font = Enum.Font.Arcade
     headerLbl.Text = "📜 Quests"
     headerLbl.TextXAlignment = Enum.TextXAlignment.Left
     headerLbl.LayoutOrder = 0
@@ -662,7 +662,7 @@ local function updateTracker()
         entry.BackgroundTransparency = 1
         entry.TextColor3 = TEXT_COLOR
         entry.TextSize = 10
-        entry.Font = Enum.Font.Gotham
+        entry.Font = Enum.Font.Arcade
         entry.Text = quest.name .. " (" .. progress .. "/" .. target .. ")"
         entry.TextXAlignment = Enum.TextXAlignment.Left
         entry.TextTruncate = Enum.TextTruncate.AtEnd

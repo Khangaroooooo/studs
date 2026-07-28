@@ -159,7 +159,7 @@ local function buildTrainerRig(def, rootCFrame, parent)
 	beaconTitle.TextColor3 = Color3.fromRGB(255, 220, 100)
 	beaconTitle.TextStrokeColor3 = Color3.fromRGB(20, 20, 30)
 	beaconTitle.TextStrokeTransparency = 0.2
-	beaconTitle.Font = Enum.Font.GothamBold
+	beaconTitle.Font = Enum.Font.Arcade
 	beaconTitle.TextScaled = true
 	beaconTitle.Parent = beacon
 
@@ -171,7 +171,7 @@ local function buildTrainerRig(def, rootCFrame, parent)
 	beaconName.TextColor3 = Color3.new(1, 1, 1)
 	beaconName.TextStrokeColor3 = Color3.fromRGB(20, 20, 30)
 	beaconName.TextStrokeTransparency = 0.2
-	beaconName.Font = Enum.Font.Gotham
+	beaconName.Font = Enum.Font.Arcade
 	beaconName.TextScaled = true
 	beaconName.Parent = beacon
 

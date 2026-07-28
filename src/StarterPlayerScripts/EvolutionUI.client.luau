@@ -57,7 +57,7 @@ titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "\226\156\168 Evolution Lab"
 titleLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Font = Enum.Font.Arcade
 titleLabel.TextSize = 18
 titleLabel.Parent = titleBar
 
@@ -69,7 +69,7 @@ closeBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
 closeBtn.BackgroundTransparency = 0.3
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Font = Enum.Font.Arcade
 closeBtn.TextSize = 14
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = titleBar
@@ -83,7 +83,7 @@ infoLabel.Position = UDim2.new(0, 10, 0, 48)
 infoLabel.BackgroundTransparency = 1
 infoLabel.Text = "Catch duplicates to earn EvoPoints! Spend them to evolve your Studs."
 infoLabel.TextColor3 = Color3.fromRGB(160, 160, 190)
-infoLabel.Font = Enum.Font.Gotham
+infoLabel.Font = Enum.Font.Arcade
 infoLabel.TextSize = 11
 infoLabel.TextWrapped = true
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -134,7 +134,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 	headerLabel.BackgroundTransparency = 1
 	headerLabel.Text = typeData.icon .. " " .. typeName
 	headerLabel.TextColor3 = typeData.color
-	headerLabel.Font = Enum.Font.GothamBold
+	headerLabel.Font = Enum.Font.Arcade
 	headerLabel.TextSize = 14
 	headerLabel.TextXAlignment = Enum.TextXAlignment.Left
 	headerLabel.Parent = header
@@ -146,7 +146,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 	pointsLabel.BackgroundTransparency = 1
 	pointsLabel.Text = "0 EvoPoints"
 	pointsLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
-	pointsLabel.Font = Enum.Font.GothamBold
+	pointsLabel.Font = Enum.Font.Arcade
 	pointsLabel.TextSize = 12
 	pointsLabel.TextXAlignment = Enum.TextXAlignment.Right
 	pointsLabel.Parent = header
@@ -195,7 +195,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.Text = stud.name
 		nameLabel.TextColor3 = typeData.color
-		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.Font = Enum.Font.Arcade
 		nameLabel.TextSize = 12
 		nameLabel.Parent = tile
 
@@ -206,7 +206,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 		rarityLabel.BackgroundTransparency = 1
 		rarityLabel.Text = stud.rarity
 		rarityLabel.TextColor3 = StudData.Rarity[stud.rarity] and StudData.Rarity[stud.rarity].color or Color3.fromRGB(180, 180, 180)
-		rarityLabel.Font = Enum.Font.Gotham
+		rarityLabel.Font = Enum.Font.Arcade
 		rarityLabel.TextSize = 10
 		rarityLabel.Parent = tile
 
@@ -218,7 +218,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 		statusLabel.BackgroundTransparency = 1
 		statusLabel.Text = "???"
 		statusLabel.TextColor3 = Color3.fromRGB(100, 100, 120)
-		statusLabel.Font = Enum.Font.GothamBold
+		statusLabel.Font = Enum.Font.Arcade
 		statusLabel.TextSize = 9
 		statusLabel.Parent = tile
 
@@ -231,7 +231,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 		evolveBtn.BackgroundTransparency = 0.2
 		evolveBtn.Text = "Evolve!"
 		evolveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-		evolveBtn.Font = Enum.Font.GothamBold
+		evolveBtn.Font = Enum.Font.Arcade
 		evolveBtn.TextSize = 9
 		evolveBtn.BorderSizePixel = 0
 		evolveBtn.Visible = false
@@ -262,7 +262,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 			arrow.BackgroundTransparency = 1
 			arrow.Text = "\226\158\156"
 			arrow.TextColor3 = Color3.fromRGB(120, 120, 160)
-			arrow.Font = Enum.Font.GothamBold
+			arrow.Font = Enum.Font.Arcade
 			arrow.TextSize = 16
 			arrow.Parent = chainRow
 
@@ -274,7 +274,7 @@ for typeIdx, typeName in ipairs(typeOrder) do
 			local cost = StudData.EvolutionCosts[stud.rarity]
 			costLabel.Text = cost and tostring(cost) or "?"
 			costLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-			costLabel.Font = Enum.Font.Gotham
+			costLabel.Font = Enum.Font.Arcade
 			costLabel.TextSize = 9
 			costLabel.Parent = chainRow
 		end
@@ -303,7 +303,7 @@ evoText.Position = UDim2.new(0.2, 0, 0.4, 0)
 evoText.BackgroundTransparency = 1
 evoText.Text = ""
 evoText.TextColor3 = Color3.fromRGB(255, 220, 100)
-evoText.Font = Enum.Font.GothamBold
+evoText.Font = Enum.Font.Arcade
 evoText.TextSize = 28
 evoText.ZIndex = 101
 evoText.Parent = evoOverlay
@@ -366,7 +366,7 @@ local function performEvolution(studId)
 		notif.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
 		notif.TextColor3 = Color3.fromRGB(255, 150, 150)
 		notif.Text = msg
-		notif.Font = Enum.Font.GothamBold
+		notif.Font = Enum.Font.Arcade
 		notif.TextSize = 13
 		notif.ZIndex = 50
 		notif.Parent = screenGui

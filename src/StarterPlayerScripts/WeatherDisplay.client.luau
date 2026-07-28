@@ -57,7 +57,7 @@ notifLabel.BackgroundTransparency = 1
 notifLabel.Text = "Clear Skies"
 notifLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 notifLabel.TextXAlignment = Enum.TextXAlignment.Left
-notifLabel.Font = Enum.Font.GothamBold
+notifLabel.Font = Enum.Font.Arcade
 notifLabel.TextSize = 16
 notifLabel.Parent = notifFrame
 

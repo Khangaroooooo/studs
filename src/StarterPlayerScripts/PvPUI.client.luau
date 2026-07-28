@@ -52,7 +52,7 @@ chLabel.Position = UDim2.new(0, 8, 0, 8)
 chLabel.BackgroundTransparency = 1
 chLabel.TextColor3 = TEXT
 chLabel.TextSize = 14
-chLabel.Font = Enum.Font.GothamBold
+chLabel.Font = Enum.Font.Arcade
 chLabel.TextWrapped = true
 chLabel.Parent = challengeFrame
 
@@ -63,7 +63,7 @@ chAccept.BackgroundColor3 = GREEN
 chAccept.Text = "ACCEPT"
 chAccept.TextColor3 = Color3.new(1, 1, 1)
 chAccept.TextSize = 14
-chAccept.Font = Enum.Font.GothamBold
+chAccept.Font = Enum.Font.Arcade
 chAccept.BorderSizePixel = 0
 chAccept.Parent = challengeFrame
 
@@ -74,7 +74,7 @@ chDecline.BackgroundColor3 = RED
 chDecline.Text = "DECLINE"
 chDecline.TextColor3 = Color3.new(1, 1, 1)
 chDecline.TextSize = 14
-chDecline.Font = Enum.Font.GothamBold
+chDecline.Font = Enum.Font.Arcade
 chDecline.BorderSizePixel = 0
 chDecline.Parent = challengeFrame
 
@@ -98,7 +98,7 @@ turnBanner.BackgroundColor3 = HEADER
 turnBanner.BorderSizePixel = 0
 turnBanner.TextColor3 = GOLD
 turnBanner.TextSize = 16
-turnBanner.Font = Enum.Font.GothamBold
+turnBanner.Font = Enum.Font.Arcade
 turnBanner.Text = "⚔️ DUEL"
 turnBanner.Parent = win
 
@@ -117,7 +117,7 @@ local function makeCard(x)
 	owner.BackgroundTransparency = 1
 	owner.TextColor3 = MUTED
 	owner.TextSize = 11
-	owner.Font = Enum.Font.Gotham
+	owner.Font = Enum.Font.Arcade
 	owner.TextXAlignment = Enum.TextXAlignment.Left
 	owner.Parent = card
 
@@ -138,7 +138,7 @@ local function makeCard(x)
 	name.BackgroundTransparency = 1
 	name.TextColor3 = TEXT
 	name.TextSize = 14
-	name.Font = Enum.Font.GothamBold
+	name.Font = Enum.Font.Arcade
 	name.TextXAlignment = Enum.TextXAlignment.Left
 	name.TextTruncate = Enum.TextTruncate.AtEnd
 	name.Parent = card
@@ -149,7 +149,7 @@ local function makeCard(x)
 	meta.BackgroundTransparency = 1
 	meta.TextColor3 = MUTED
 	meta.TextSize = 11
-	meta.Font = Enum.Font.Gotham
+	meta.Font = Enum.Font.Arcade
 	meta.TextXAlignment = Enum.TextXAlignment.Left
 	meta.Parent = card
 
@@ -172,7 +172,7 @@ local function makeCard(x)
 	hpText.BackgroundTransparency = 1
 	hpText.TextColor3 = MUTED
 	hpText.TextSize = 11
-	hpText.Font = Enum.Font.RobotoMono
+	hpText.Font = Enum.Font.Arcade
 	hpText.Parent = card
 
 	return { card = card, owner = owner, swatch = swatch, name = name, meta = meta, hpFill = hpFill, hpText = hpText }
@@ -212,7 +212,7 @@ for i = 1, 4 do
 	lbl.BackgroundTransparency = 1
 	lbl.TextColor3 = i == 4 and TEXT or MUTED
 	lbl.TextSize = 12
-	lbl.Font = Enum.Font.RobotoMono
+	lbl.Font = Enum.Font.Arcade
 	lbl.TextXAlignment = Enum.TextXAlignment.Left
 	lbl.TextTruncate = Enum.TextTruncate.AtEnd
 	lbl.Text = ""
@@ -247,7 +247,7 @@ for i = 1, 4 do
 	btn.BackgroundColor3 = Color3.fromRGB(50, 80, 140)
 	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.TextSize = 12
-	btn.Font = Enum.Font.GothamBold
+	btn.Font = Enum.Font.Arcade
 	btn.TextWrapped = true
 	btn.BorderSizePixel = 0
 	btn.Text = "Move " .. i
@@ -266,7 +266,7 @@ defendBtn.BackgroundColor3 = Color3.fromRGB(70, 110, 90)
 defendBtn.Text = "🛡️ DEFEND"
 defendBtn.TextColor3 = Color3.new(1, 1, 1)
 defendBtn.TextSize = 14
-defendBtn.Font = Enum.Font.GothamBold
+defendBtn.Font = Enum.Font.Arcade
 defendBtn.BorderSizePixel = 0
 defendBtn.Parent = actionFrame
 defendBtn.MouseButton1Click:Connect(function()
@@ -280,7 +280,7 @@ forfeitBtn.BackgroundColor3 = RED
 forfeitBtn.Text = "🏳️ FORFEIT"
 forfeitBtn.TextColor3 = Color3.new(1, 1, 1)
 forfeitBtn.TextSize = 14
-forfeitBtn.Font = Enum.Font.GothamBold
+forfeitBtn.Font = Enum.Font.Arcade
 forfeitBtn.BorderSizePixel = 0
 forfeitBtn.Parent = actionFrame
 forfeitBtn.MouseButton1Click:Connect(function()

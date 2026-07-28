@@ -61,7 +61,7 @@ sprintLabel.Size = UDim2.new(1, 0, 1, 0)
 sprintLabel.BackgroundTransparency = 1
 sprintLabel.Text = "Sprint"
 sprintLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-sprintLabel.Font = Enum.Font.GothamBold
+sprintLabel.Font = Enum.Font.Arcade
 sprintLabel.TextSize = 14
 sprintLabel.Parent = sprintBadge
 -- Monitor sprint state
@@ -105,7 +105,7 @@ player:GetAttributeChangedSignal("HouseRestBonus"):Connect(function()
 		notif.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
 		notif.TextColor3 = Color3.fromRGB(100, 255, 100)
 		notif.Text = "Rested at home! Cooldown reset."
-		notif.Font = Enum.Font.GothamBold
+		notif.Font = Enum.Font.Arcade
 		notif.TextSize = 16
 		notif.Parent = screenGui
 		task.delay(2, function()

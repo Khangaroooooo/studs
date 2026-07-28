@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
 local StudData = require(ReplicatedStorage:WaitForChild("StudData"))
+local BattleTeam = require(ReplicatedStorage:WaitForChild("BattleTeam"))
 local ServerRegistry = require(ReplicatedStorage:WaitForChild("ServerRegistry"))
 
 -- NOTE: CatchSuccess is NOT created here anymore — it now ships as a synced
@@ -344,6 +345,15 @@ local function createNewSaveData()
 		lastPosition = nil,
 		storyMode = true, -- Story vs Casual; picked on New Game, switchable in Settings
 		story = { seen = {}, worldCatches = {}, ending = nil }, -- StorySystem's namespace (beats fired, per-world catch counts, ending choice)
+		-- Growth/retention state (AnalyticsSystem, ReferralSystem, MilestoneSystem)
+		daysPlayed = 0, -- distinct UTC days this slot was played
+		lastPlayedDay = nil, -- "YYYY-MM-DD" of the most recent counted day
+		firstCoopAt = nil, -- os.time() of first session with a friend in the server
+		referredBy = nil, -- inviter UserId (official Friend Referral System join data)
+		referralRewarded = false, -- both-sides referral reward already granted
+		totalEvolutions = 0,
+		totalTrades = 0,
+		pvpWins = 0,
 	}
 end
 
@@ -419,7 +429,7 @@ end
 -- ordered roster; equippedStudId always mirrors the lead (team[1]) so every
 -- system that predates teams (companion, PvP, profile, encounter fallback)
 -- keeps working off a single "representative" stud with no changes.
-local MAX_TEAM = 6
+local MAX_TEAM = BattleTeam.MAX_TEAM -- one cap shared with both battle drivers + UIs
 
 -- Keep equippedTeam self-consistent after any collection/equip mutation:
 -- drop unowned species and duplicates, cap at MAX_TEAM, and re-point
@@ -980,6 +990,14 @@ ServerRegistry.Register("GrantCatch", function(player, studId, opts)
 		checkDexMilestones(player)
 	end)
 
+	-- Growth hooks: AnalyticsSystem (funnel/TTFC) sees every catch;
+	-- ReferralSystem's both-sides reward is gated on the FIRST catch
+	-- specifically (anti-abuse: a join alone pays nothing)
+	ServerRegistry.Call("OnCatchGranted", player, studId, data)
+	if (data.totalCaught or 0) == 1 then
+		ServerRegistry.Call("OnFirstCatch", player, data)
+	end
+
 	return {
 		isNew = not alreadyCaught,
 		coinsAwarded = reward,
@@ -1076,6 +1094,9 @@ ServerRegistry.Register("ExecuteTrade", function(playerA, playerB, offersA, offe
 		end
 		syncPlayerAttributes(plr, inf.data)
 	end
+
+	infoA.data.totalTrades = (infoA.data.totalTrades or 0) + 1
+	infoB.data.totalTrades = (infoB.data.totalTrades or 0) + 1
 
 	-- Persist both sides immediately — a trade is exactly the kind of change
 	-- that must not be lost to a crash before the next autosave
@@ -1420,6 +1441,7 @@ StudEvents.EvolveStud.OnServerInvoke = function(player, studId, targetId)
 	end
 
 	playerInfo.data.evoPoints[stud.studType] = currentPoints - cost
+	playerInfo.data.totalEvolutions = (playerInfo.data.totalEvolutions or 0) + 1
 	playerInfo.data.lastSaved = os.time()
 	setSlotData(player.UserId, playerInfo.activeSlot, playerInfo.data)
 	syncPlayerAttributes(player, playerInfo.data)

@@ -9,6 +9,18 @@ local player = Players.LocalPlayer
 local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
 local StudData = require(ReplicatedStorage:WaitForChild("StudData"))
 local UIManager = require(ReplicatedStorage:WaitForChild("UIManager"))
+local MonetizationConfig = require(ReplicatedStorage:WaitForChild("MonetizationConfig"))
+
+-- ─── ROBUX GAMEPASSES ──────────────────────────────────────────────────
+-- Display info for the real-money passes, keyed by the attribute each pass
+-- grants (see MonetizationConfig.Gamepasses). The pass ID + actual Robux
+-- charge live on the Creator Dashboard; `robux` here is just the price shown
+-- on the button. Owned state is read from the player attribute the server
+-- sets on ownership. Buying fires the PromptPurchase remote (server-validated).
+local GAMEPASS_DISPLAY = {
+	ShinyCharm     = { robux = 100, icon = "✨", desc = "2x shiny odds, forever" },
+	ExtraSaveSlots = { robux = 50,  icon = "💾", desc = "+5 save slots" },
+}
 
 -- Shop items available for purchase. Catch balls come from StudData (shared
 -- with the server, which consumes them at CatchStart); `consumable` rows
@@ -66,7 +78,7 @@ title.BorderSizePixel = 0
 title.Text = "STUD SHOP"
 title.TextColor3 = Color3.fromRGB(255, 200, 50)
 title.TextScaled = true
-title.Font = Enum.Font.GothamBold
+title.Font = Enum.Font.Arcade
 title.Parent = frame
 
 
@@ -86,7 +98,7 @@ coinsLabel.Position = UDim2.new(0.7, 0, 0, 10)
 coinsLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 coinsLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 coinsLabel.Text = "Coins: 0"
-coinsLabel.Font = Enum.Font.GothamBold
+coinsLabel.Font = Enum.Font.Arcade
 coinsLabel.TextSize = 16
 coinsLabel.Parent = frame
 
@@ -100,7 +112,7 @@ closeBtn.Position = UDim2.new(1, -50, 0, 5)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.new(1, 1, 1)
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Font = Enum.Font.Arcade
 closeBtn.TextSize = 20
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = frame
@@ -130,7 +142,7 @@ for i, tabName in ipairs({"Sell", "Buy"}) do
 	btn.BackgroundColor3 = (tabName == "Sell") and Color3.fromRGB(255, 200, 50) or Color3.fromRGB(50, 50, 65)
 	btn.TextColor3 = (tabName == "Sell") and Color3.fromRGB(30, 30, 40) or Color3.fromRGB(200, 200, 210)
 	btn.TextSize = 14
-	btn.Font = Enum.Font.GothamBold
+	btn.Font = Enum.Font.Arcade
 	btn.Text = tabName
 	btn.BorderSizePixel = 0
 	btn.LayoutOrder = i
@@ -187,7 +199,7 @@ toggleBtn.BackgroundTransparency = 0.25
 toggleBtn.TextColor3 = Color3.fromRGB(255, 200, 50)
 toggleBtn.TextSize = 22
 toggleBtn.Text = "🛒"
-toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Font = Enum.Font.Arcade
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Parent = screenGui
 
@@ -279,7 +291,7 @@ local function populateSell()
 			nameLabel.Text = stud.name
 			nameLabel.TextColor3 = Color3.new(1, 1, 1)
 			nameLabel.TextSize = 14
-			nameLabel.Font = Enum.Font.GothamBold
+			nameLabel.Font = Enum.Font.Arcade
 			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 			nameLabel.Parent = entry
 
@@ -291,7 +303,7 @@ local function populateSell()
 			countLabel.Text = "x" .. count
 			countLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
 			countLabel.TextSize = 14
-			countLabel.Font = Enum.Font.Gotham
+			countLabel.Font = Enum.Font.Arcade
 			countLabel.Parent = entry
 
 			-- Sell button
@@ -302,7 +314,7 @@ local function populateSell()
 			sellBtn.Text = "Sell +" .. sellValue
 			sellBtn.TextColor3 = Color3.fromRGB(30, 30, 40)
 			sellBtn.TextSize = 12
-			sellBtn.Font = Enum.Font.GothamBold
+			sellBtn.Font = Enum.Font.Arcade
 			sellBtn.BorderSizePixel = 0
 			sellBtn.Parent = entry
 
@@ -328,7 +340,7 @@ local function populateSell()
 		emptyLabel.Text = "No studs to sell!\nCatch some studs first."
 		emptyLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 		emptyLabel.TextSize = 14
-		emptyLabel.Font = Enum.Font.Gotham
+		emptyLabel.Font = Enum.Font.Arcade
 		emptyLabel.Parent = scrollFrame
 	end
 end
@@ -373,7 +385,7 @@ local function populateBuy()
 		nameLabel.Text = "⭐ STUD OF THE DAY: " .. featured.name
 		nameLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
 		nameLabel.TextSize = 14
-		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.Font = Enum.Font.Arcade
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = entry
 
@@ -386,7 +398,7 @@ local function populateBuy()
 			.. "\nNew stud daily!"
 		descLabel.TextColor3 = Color3.fromRGB(200, 190, 160)
 		descLabel.TextSize = 11
-		descLabel.Font = Enum.Font.Gotham
+		descLabel.Font = Enum.Font.Arcade
 		descLabel.TextWrapped = true
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.Parent = entry
@@ -399,7 +411,7 @@ local function populateBuy()
 		buyBtn.Text = "$" .. featured.price
 		buyBtn.TextColor3 = canAfford and Color3.new(1, 1, 1) or Color3.fromRGB(120, 120, 130)
 		buyBtn.TextSize = 13
-		buyBtn.Font = Enum.Font.GothamBold
+		buyBtn.Font = Enum.Font.Arcade
 		buyBtn.BorderSizePixel = 0
 		buyBtn.Parent = entry
 
@@ -456,7 +468,7 @@ local function populateBuy()
 		nameLabel.Text = item.name
 		nameLabel.TextColor3 = Color3.new(1, 1, 1)
 		nameLabel.TextSize = 14
-		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.Font = Enum.Font.Arcade
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = entry
 
@@ -472,7 +484,7 @@ local function populateBuy()
 		descLabel.Text = descText
 		descLabel.TextColor3 = Color3.fromRGB(160, 160, 180)
 		descLabel.TextSize = 11
-		descLabel.Font = Enum.Font.Gotham
+		descLabel.Font = Enum.Font.Arcade
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.Parent = entry
 
@@ -485,7 +497,7 @@ local function populateBuy()
 		buyBtn.Text = "$" .. item.price
 		buyBtn.TextColor3 = canAfford and Color3.new(1, 1, 1) or Color3.fromRGB(120, 120, 130)
 		buyBtn.TextSize = 13
-		buyBtn.Font = Enum.Font.GothamBold
+		buyBtn.Font = Enum.Font.Arcade
 		buyBtn.BorderSizePixel = 0
 		buyBtn.Parent = entry
 		local buyStroke = Instance.new("UIStroke")
@@ -525,7 +537,7 @@ local function populateBuy()
 		header.Text = "  🎽 HELD ITEMS · " .. (shopInfo.currentWorldName or "This Island")
 		header.TextColor3 = Color3.fromRGB(210, 190, 255)
 		header.TextSize = 14
-		header.Font = Enum.Font.GothamBold
+		header.Font = Enum.Font.Arcade
 		header.TextXAlignment = Enum.TextXAlignment.Left
 		header.Parent = scrollFrame
 
@@ -550,7 +562,7 @@ local function populateBuy()
 			iconLabel.BorderSizePixel = 0
 			iconLabel.Text = item.icon or "🎽"
 			iconLabel.TextScaled = true
-			iconLabel.Font = Enum.Font.GothamBold
+			iconLabel.Font = Enum.Font.Arcade
 			iconLabel.Parent = entry
 
 			local nameLabel = Instance.new("TextLabel")
@@ -560,7 +572,7 @@ local function populateBuy()
 			nameLabel.Text = item.name .. (ownedCount > 0 and ("  · In bag x" .. ownedCount) or "")
 			nameLabel.TextColor3 = Color3.new(1, 1, 1)
 			nameLabel.TextSize = 14
-			nameLabel.Font = Enum.Font.GothamBold
+			nameLabel.Font = Enum.Font.Arcade
 			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 			nameLabel.Parent = entry
 
@@ -578,7 +590,7 @@ local function populateBuy()
 			descLabel.Text = notes
 			descLabel.TextColor3 = item.island and Color3.fromRGB(205, 180, 245) or Color3.fromRGB(160, 160, 180)
 			descLabel.TextSize = 11
-			descLabel.Font = Enum.Font.Gotham
+			descLabel.Font = Enum.Font.Arcade
 			descLabel.TextWrapped = true
 			descLabel.TextYAlignment = Enum.TextYAlignment.Top
 			descLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -592,7 +604,7 @@ local function populateBuy()
 			buyBtn.Text = "$" .. (item.price or 0)
 			buyBtn.TextColor3 = canAfford and Color3.new(1, 1, 1) or Color3.fromRGB(120, 120, 130)
 			buyBtn.TextSize = 13
-			buyBtn.Font = Enum.Font.GothamBold
+			buyBtn.Font = Enum.Font.Arcade
 			buyBtn.BorderSizePixel = 0
 			buyBtn.Parent = entry
 			local buyStroke = Instance.new("UIStroke")
@@ -613,6 +625,96 @@ local function populateBuy()
 			end)
 		end
 	end
+		-- ─── PREMIUM (Robux gamepasses) ──────────────────────────────────────
+		-- Real-money passes. Prices/icons come from GAMEPASS_DISPLAY; IDs from
+		-- MonetizationConfig. Buying fires PromptPurchase; the server ignores a
+		-- pass whose ID is still 0, so this is safe before the IDs are wired.
+		local passHeader = Instance.new("TextLabel")
+		passHeader.Name = "GamepassHeader"
+		passHeader.Size = UDim2.new(1, 0, 0, 34)
+		passHeader.BackgroundColor3 = Color3.fromRGB(20, 34, 30)
+		passHeader.BorderSizePixel = 0
+		passHeader.LayoutOrder = 200
+		passHeader.Text = "  💎 PREMIUM · Robux"
+		passHeader.TextColor3 = Color3.fromRGB(150, 235, 180)
+		passHeader.TextSize = 14
+		passHeader.Font = Enum.Font.Arcade
+		passHeader.TextXAlignment = Enum.TextXAlignment.Left
+		passHeader.Parent = scrollFrame
+
+		for pi, pass in ipairs(MonetizationConfig.Gamepasses) do
+			local display = GAMEPASS_DISPLAY[pass.attr]
+			if display then
+				local owned = player:GetAttribute(pass.attr) ~= nil
+
+				local entry = Instance.new("Frame")
+				entry.Name = "gamepass_" .. pass.attr
+				entry.Size = UDim2.new(1, 0, 0, 60)
+				entry.BackgroundColor3 = Color3.fromRGB(28, 44, 38)
+				entry.BorderSizePixel = 0
+				entry.LayoutOrder = 200 + pi
+				entry.Parent = scrollFrame
+				local entryStroke = Instance.new("UIStroke")
+				entryStroke.Color = Color3.fromRGB(60, 150, 100)
+				entryStroke.Thickness = 2
+				entryStroke.Parent = entry
+
+				local iconLabel = Instance.new("TextLabel")
+				iconLabel.Size = UDim2.new(0, 40, 0, 40)
+				iconLabel.Position = UDim2.new(0, 8, 0, 10)
+				iconLabel.BackgroundColor3 = Color3.fromRGB(20, 34, 30)
+				iconLabel.BorderSizePixel = 0
+				iconLabel.Text = display.icon
+				iconLabel.TextScaled = true
+				iconLabel.Font = Enum.Font.Arcade
+				iconLabel.Parent = entry
+
+				local nameLabel = Instance.new("TextLabel")
+				nameLabel.Size = UDim2.new(0.5, -50, 0, 22)
+				nameLabel.Position = UDim2.new(0, 52, 0, 6)
+				nameLabel.BackgroundTransparency = 1
+				nameLabel.Text = pass.label
+				nameLabel.TextColor3 = Color3.new(1, 1, 1)
+				nameLabel.TextSize = 14
+				nameLabel.Font = Enum.Font.Arcade
+				nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+				nameLabel.Parent = entry
+
+				local descLabel = Instance.new("TextLabel")
+				descLabel.Size = UDim2.new(0.5, -50, 0, 18)
+				descLabel.Position = UDim2.new(0, 52, 0, 30)
+				descLabel.BackgroundTransparency = 1
+				descLabel.Text = display.desc
+				descLabel.TextColor3 = Color3.fromRGB(160, 200, 180)
+				descLabel.TextSize = 11
+				descLabel.Font = Enum.Font.Arcade
+				descLabel.TextXAlignment = Enum.TextXAlignment.Left
+				descLabel.Parent = entry
+
+				local buyBtn = Instance.new("TextButton")
+				buyBtn.Size = UDim2.new(0.25, -10, 1, -10)
+				buyBtn.Position = UDim2.new(0.75, 5, 0, 5)
+				buyBtn.BackgroundColor3 = owned and Color3.fromRGB(60, 70, 65) or Color3.fromRGB(0, 176, 111)
+				buyBtn.Text = owned and "OWNED" or ("R$ " .. display.robux)
+				buyBtn.TextColor3 = owned and Color3.fromRGB(150, 160, 155) or Color3.new(1, 1, 1)
+				buyBtn.TextSize = 13
+				buyBtn.Font = Enum.Font.Arcade
+				buyBtn.BorderSizePixel = 0
+				buyBtn.AutoButtonColor = not owned
+				buyBtn.Parent = entry
+				local buyStroke = Instance.new("UIStroke")
+				buyStroke.Color = Color3.fromRGB(10, 8, 14)
+				buyStroke.Thickness = 2
+				buyStroke.Parent = buyBtn
+
+				buyBtn.MouseButton1Click:Connect(function()
+					if owned then return end
+					-- Server validates the ID is one we actually sell before
+					-- prompting; a 0 ID (not yet configured) is a no-op.
+					StudEvents.PromptPurchase:FireServer("gamepass", pass.id)
+				end)
+			end
+		end
 end
 
 -- Refresh content based on current tab
@@ -684,6 +786,16 @@ end)
 StudEvents.UpdateCoins.OnClientEvent:Connect(function(coins)
 	updateCoins(coins)
 end)
+
+-- When a gamepass grant lands (server sets the attribute on purchase/ownership),
+-- refresh the Buy tab so its button flips to "OWNED" without reopening the shop.
+for _, pass in ipairs(MonetizationConfig.Gamepasses) do
+	player:GetAttributeChangedSignal(pass.attr):Connect(function()
+		if isOpen and currentTab == "Buy" then
+			populateBuy()
+		end
+	end)
+end
 
 -- Listen for purchase results (RemoteEvent — reliable even when the same
 -- item is bought twice in a row, unlike the old attribute flash, which

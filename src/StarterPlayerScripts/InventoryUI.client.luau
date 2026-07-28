@@ -52,8 +52,8 @@ local main
 local isOpen       = false
 local collection   = {}   -- array of stud data from server
 local equippedStudId = nil -- team lead (equippedTeam[1]), from server
-local equippedTeam = {}    -- ordered battle team (species ids, ≤ 6)
-local MAX_TEAM = 6
+local equippedTeam = {}    -- ordered battle team (species ids, ≤ MAX_TEAM)
+local MAX_TEAM = require(ReplicatedStorage:WaitForChild("BattleTeam")).MAX_TEAM
 local heldItems    = {}   -- [speciesId] = itemId (equipped held items)
 local ownedItems   = {}   -- [itemId] = count (unequipped pool, for the picker)
 local filtered     = {}   -- filtered subset
@@ -239,6 +239,7 @@ local function buildUI()
     gui = Instance.new("ScreenGui")
     gui.Name           = "InventoryUI"
     gui.ResetOnSpawn   = false
+    gui.IgnoreGuiInset = true -- fill the whole screen, including the topbar strip
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.Parent         = player:WaitForChild("PlayerGui")
 

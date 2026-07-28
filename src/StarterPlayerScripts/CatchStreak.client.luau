@@ -39,7 +39,7 @@ streakLabel.Position = UDim2.new(0, 0, 0, 0)
 streakLabel.BackgroundTransparency = 1
 streakLabel.Text = "0x Streak"
 streakLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
-streakLabel.Font = Enum.Font.GothamBold
+streakLabel.Font = Enum.Font.Arcade
 streakLabel.TextSize = 16
 streakLabel.Parent = streakFrame
 
@@ -50,7 +50,7 @@ streakSubLabel.Position = UDim2.new(0, 0, 0.6, 0)
 streakSubLabel.BackgroundTransparency = 1
 streakSubLabel.Text = "Nice!"
 streakSubLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-streakSubLabel.Font = Enum.Font.Gotham
+streakSubLabel.Font = Enum.Font.Arcade
 streakSubLabel.TextSize = 11
 streakSubLabel.Parent = streakFrame
 
@@ -79,7 +79,7 @@ chainLabel.Size = UDim2.new(1, 0, 1, 0)
 chainLabel.BackgroundTransparency = 1
 chainLabel.Text = ""
 chainLabel.TextColor3 = Color3.fromRGB(150, 235, 165)
-chainLabel.Font = Enum.Font.GothamBold
+chainLabel.Font = Enum.Font.Arcade
 chainLabel.TextSize = 13
 chainLabel.Parent = chainFrame
 

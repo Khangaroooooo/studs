@@ -1,0 +1,368 @@
+<title>Studs — R6 Walk & Run Preview</title>
+<style>
+  :root {
+    --bg-0: #0e1014;
+    --bg-1: #16191f;
+    --panel: rgba(20, 23, 30, 0.72);
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --ink: #eef1f6;
+    --muted: #8b93a4;
+    --faint: #5b6273;
+    --accent: #37e0c4;
+    --accent-dim: rgba(55, 224, 196, 0.16);
+    --sans: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  #stage {
+    position: relative; width: 100%; height: 100vh; min-height: 560px;
+    overflow: hidden; color: var(--ink); font-family: var(--sans);
+    -webkit-font-smoothing: antialiased; user-select: none;
+    background: radial-gradient(120% 90% at 50% 12%, #1c2029 0%, var(--bg-1) 45%, var(--bg-0) 100%);
+  }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  #view.grabbing { cursor: grabbing; }
+
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: baseline;
+    gap: 14px; padding: 20px 24px; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(8, 9, 12, 0.66), transparent);
+  }
+  .topbar h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: 0.2px; }
+  .topbar .tag {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; color: var(--accent);
+    text-transform: uppercase; padding: 3px 8px; border: 1px solid var(--accent-dim);
+    border-radius: 999px; background: var(--accent-dim);
+  }
+  .topbar .sub { margin-left: auto; font-size: 12.5px; color: var(--muted); max-width: 42ch; text-align: right; line-height: 1.4; }
+
+  .hud {
+    position: absolute; top: 74px; right: 24px; display: grid;
+    grid-template-columns: repeat(2, minmax(96px, 1fr)); gap: 8px; pointer-events: none;
+  }
+  .chip { background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; }
+  .chip .k { font-size: 9.5px; letter-spacing: 0.9px; text-transform: uppercase; color: var(--faint); }
+  .chip .v { font-family: var(--mono); font-size: 16px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .chip .v small { color: var(--muted); font-size: 11px; }
+
+  .controls {
+    position: absolute; left: 24px; bottom: 24px; width: 300px; max-width: calc(100vw - 48px);
+    background: var(--panel); backdrop-filter: blur(14px); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px; box-shadow: 0 18px 50px -18px rgba(0,0,0,0.8);
+  }
+  .controls .row { margin-bottom: 15px; } .controls .row:last-child { margin-bottom: 0; }
+  .lbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px;
+    letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+  .lbl b { font-family: var(--mono); font-weight: 500; font-size: 12px; color: var(--accent); text-transform: none; letter-spacing: 0; }
+
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px; outline: none; margin: 0;
+    background: linear-gradient(to right, var(--accent) 0 var(--fill, 66%), rgba(255,255,255,0.12) var(--fill, 66%) 100%); }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; border: 3px solid #0e1014; box-shadow: 0 0 0 1px var(--accent), 0 2px 6px rgba(0,0,0,0.5); cursor: pointer; }
+  input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #0e1014; box-shadow: 0 0 0 1px var(--accent); cursor: pointer; }
+  input[type="range"]:focus-visible { box-shadow: 0 0 0 3px var(--accent-dim); }
+
+  .presets { display: flex; gap: 6px; }
+  .presets button {
+    flex: 1; font-family: var(--sans); font-size: 12px; font-weight: 550; color: var(--muted);
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 9px; padding: 7px 0;
+    cursor: pointer; transition: color .12s, border-color .12s, background .12s;
+  }
+  .presets button:hover { color: var(--ink); border-color: var(--border-strong); }
+  .presets button.on { color: #06110f; background: var(--accent); border-color: var(--accent); }
+  .presets button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .jump {
+    width: 100%; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--ink);
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border-strong); border-radius: 10px;
+    padding: 9px 0; cursor: pointer; transition: background .12s, border-color .12s;
+  }
+  .jump:hover { background: rgba(55,224,196,0.12); border-color: var(--accent); }
+  .jump:active { background: var(--accent-dim); }
+  .jump:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .toggles { display: flex; flex-direction: column; gap: 10px; }
+  .tog { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink); cursor: pointer; }
+  .tog input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .sw { position: relative; width: 34px; height: 19px; border-radius: 999px; background: rgba(255,255,255,0.14);
+    border: 1px solid var(--border); flex: none; transition: background .15s; }
+  .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%;
+    background: #cfd4de; transition: transform .15s, background .15s; }
+  .tog input:checked + .sw { background: var(--accent); }
+  .tog input:checked + .sw::after { transform: translateX(15px); background: #06110f; }
+  .tog input:focus-visible + .sw { box-shadow: 0 0 0 3px var(--accent-dim); }
+  .tog .hint { color: var(--faint); font-size: 11px; margin-left: auto; }
+
+  .foot { position: absolute; right: 24px; bottom: 22px; font-family: var(--mono); font-size: 11px;
+    line-height: 1.5; color: var(--faint); text-align: right; pointer-events: none; max-width: 46ch; }
+  .foot b { color: var(--muted); font-weight: 500; }
+
+  @media (max-width: 720px) {
+    .topbar .sub { display: none; }
+    .hud { top: auto; bottom: 320px; right: 16px; grid-template-columns: repeat(2, 92px); }
+    .controls { left: 16px; right: 16px; bottom: 16px; width: auto; }
+    .foot { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .presets button, .sw, .sw::after, .jump { transition: none; } }
+</style>
+
+<div id="stage">
+  <canvas id="view"></canvas>
+
+  <div class="topbar">
+    <h1>R6 Walk &amp; Run</h1>
+    <span class="tag">Studs · reworked gait</span>
+    <p class="sub">Procedural R6 locomotion — the same stride, arm counter-swing, hip bob and lean that <code>R6Gait.luau</code> drives in game. Drag to orbit.</p>
+  </div>
+
+  <div class="hud">
+    <div class="chip"><div class="k">Speed</div><div class="v" id="hudSpeed">16<small> sps</small></div></div>
+    <div class="chip"><div class="k">State</div><div class="v" id="hudState">Walk</div></div>
+    <div class="chip"><div class="k">Cadence</div><div class="v" id="hudCad">0<small>/min</small></div></div>
+    <div class="chip"><div class="k">Lean</div><div class="v" id="hudLean">0°</div></div>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <div class="lbl">Movement speed <b id="spdVal">16 · walk</b></div>
+      <input id="speed" type="range" min="0" max="24" step="0.5" value="16" aria-label="Movement speed" />
+    </div>
+    <div class="row">
+      <div class="presets" role="group" aria-label="Speed presets">
+        <button data-spd="0">Idle</button>
+        <button data-spd="16" class="on">Walk</button>
+        <button data-spd="24">Run</button>
+      </div>
+    </div>
+    <div class="row"><button class="jump" id="jumpBtn">Jump ⤒</button></div>
+    <div class="row toggles">
+      <label class="tog"><input type="checkbox" id="tTurn" /><span class="sw"></span> Auto-turn <span class="hint">shows banking</span></label>
+      <label class="tog"><input type="checkbox" id="tOrbit" /><span class="sw"></span> Auto-orbit camera</label>
+    </div>
+  </div>
+
+  <div class="foot">
+    Same math as <b>ReplicatedStorage/R6Gait.luau</b><br />
+    Z-axis limb swing · hip bob · forward lean · air pose
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("view");
+  const ctx = canvas.getContext("2d");
+  const stage = document.getElementById("stage");
+
+  const sub = (a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+  const add = (a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+  const dot = (a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const cross = (a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const norm = (a)=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l];};
+  const clamp=(v,lo,hi)=>v<lo?lo:v>hi?hi:v;
+  const rad=(d)=>d*Math.PI/180, deg=(r)=>r*180/Math.PI;
+  const mix=(a,b,t)=>a+(b-a)*t;
+  const damp=(c,t,tau,dt)=>c+(t-c)*(1-Math.exp(-dt/Math.max(tau,1e-4)));
+  const rotX=(p,a)=>{const c=Math.cos(a),s=Math.sin(a);return[p[0],p[1]*c-p[2]*s,p[1]*s+p[2]*c];};
+  const rotY=(p,a)=>{const c=Math.cos(a),s=Math.sin(a);return[p[0]*c+p[2]*s,p[1],-p[0]*s+p[2]*c];};
+  const rotZ=(p,a)=>{const c=Math.cos(a),s=Math.sin(a);return[p[0]*c-p[1]*s,p[0]*s+p[1]*c,p[2]];};
+  const about=(p,fn,a,piv)=>add(fn(sub(p,piv),a),piv);
+
+  // ── motion constants — mirror R6Gait.luau ─────────────────────────
+  const REF=16, STRIDE=0.55;
+  const LEG_W=rad(26), LEG_R=rad(48), ARM_W=rad(18), ARM_R=rad(50);
+  const BOB_W=0.18, BOB_R=0.40, LAT=0.06, LEAN_MAX=rad(15);
+  const LEG_AIR=rad(24), ARM_AIR=rad(150);
+
+  // ── R6 skeleton (studs; faces +Z, feet at y=0) ────────────────────
+  const JERSEY=[47,184,166], PANTS=[58,63,75], SKIN=[233,183,137];
+  const hipPiv=[0,2,0];
+  const shoulder={"1":[1.5,4,0],"-1":[-1.5,4,0]};
+  const legHip={"1":[0.5,2,0],"-1":[-0.5,2,0]};
+  const parts=[
+    {n:"rLeg",g:"leg",s:1, c:[0.5,1,0], sz:[1,2,1], col:PANTS},
+    {n:"lLeg",g:"leg",s:-1,c:[-0.5,1,0],sz:[1,2,1], col:PANTS},
+    {n:"torso",g:"upper",s:0,c:[0,3,0], sz:[2,2,1], col:JERSEY},
+    {n:"rArm",g:"arm",s:1, c:[1.5,3,0], sz:[1,2,1], col:JERSEY},
+    {n:"lArm",g:"arm",s:-1,c:[-1.5,3,0],sz:[1,2,1], col:JERSEY},
+    {n:"head",g:"upper",s:0,c:[0,4.75,0],sz:[1.5,1.45,1.4],col:SKIN},
+  ];
+  const CORNER=[]; for(let i=0;i<8;i++)CORNER.push([(i&4?1:-1),(i&2?1:-1),(i&1?1:-1)]);
+  const FACE=[[0,1,3,2],[4,5,7,6],[0,4,5,1],[2,6,7,3],[0,4,6,2],[1,5,7,3]];
+  const cornersOf=(p)=>CORNER.map(u=>[p.c[0]+u[0]*p.sz[0]/2,p.c[1]+u[1]*p.sz[1]/2,p.c[2]+u[2]*p.sz[2]/2]);
+
+  const st={
+    speed:16, phase:0, t:0, amp:0, air:0, lean:0, bank:0,
+    facing:0, lastFacing:0, hopY:0, jumpT:-1,
+    az:0, el:0.08, radius:16, target:[0,3,0],
+    autoTurn:false, autoOrbit:false,
+  };
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let W=0,H=0,DPR=1,K=600,cx=0,cy=0;
+  function resize(){
+    DPR=Math.min(devicePixelRatio||1,2); W=stage.clientWidth; H=stage.clientHeight;
+    canvas.width=Math.round(W*DPR); canvas.height=Math.round(H*DPR);
+    canvas.style.width=W+"px"; canvas.style.height=H+"px";
+    ctx.setTransform(DPR,0,0,DPR,0,0); cx=W/2; cy=H/2; K=0.5*H/Math.tan(rad(46)/2);
+  }
+  new ResizeObserver(resize).observe(stage); resize();
+
+  const camPos=()=>{const ce=Math.cos(st.el),se=Math.sin(st.el);
+    return add(st.target,[st.radius*Math.sin(st.az)*ce, st.radius*se, st.radius*Math.cos(st.az)*ce]);};
+  function makeCam(){const eye=camPos();const fwd=norm(sub(st.target,eye));
+    const right=norm(cross(fwd,[0,1,0]));const up=cross(right,fwd);return{eye,fwd,right,up};}
+  function project(pt,cam){const r=sub(pt,cam.eye);const z=dot(r,cam.fwd);
+    if(z<=0.05)return null;return{x:cx+dot(r,cam.right)/z*K,y:cy-dot(r,cam.up)/z*K,z};}
+  const LIGHT=norm([-0.35,1.0,0.45]);
+  const shade=(c,b)=>`rgb(${Math.round(c[0]*b)},${Math.round(c[1]*b)},${Math.round(c[2]*b)})`;
+
+  // per-limb "forward" angles (contralateral), then air-pose blend
+  function limbAngles(){
+    const rb=clamp((st.speed-REF)/8,0,1);
+    const legAmp=mix(LEG_W,LEG_R,rb), armAmp=mix(ARM_W,ARM_R,rb);
+    const S=Math.sin(st.phase)*legAmp*st.amp;      // right leg forward
+    const A=Math.sin(st.phase)*armAmp*st.amp;      // right arm swing
+    const breath=Math.sin(st.t*1.5)*rad(2)*(1-st.amp)*(1-st.air);
+    return {
+      rLeg: mix( S, LEG_AIR, st.air),
+      lLeg: mix(-S, LEG_AIR, st.air),
+      rArm: mix(-A+breath, ARM_AIR, st.air),
+      lArm: mix( A-breath, ARM_AIR, st.air),
+    };
+  }
+
+  function worldFn(p, ang){
+    const face=(q)=>about(q, rotY, st.facing, [0,0,0]);
+    const bob=(q)=>add(q, [st.latX, st.bobY + st.hopY, 0]);
+    const lean=(q)=>about(q, rotX, st.leanEff, hipPiv);
+    if(p.g==="leg"){ const f = p.s>0?ang.rLeg:ang.lLeg;
+      return (q)=>face(bob(about(q, rotX, -f, legHip[p.s]))); }
+    if(p.g==="arm"){ const f = p.s>0?ang.rArm:ang.lArm;
+      return (q)=>face(bob(lean(about(q, rotX, -f, shoulder[p.s])))); }
+    return (q)=>face(bob(lean(q))); // torso + head
+  }
+
+  function drawGrid(cam){
+    const N=9, step=2.4; ctx.lineWidth=1;
+    for(let i=-N;i<=N;i++){
+      const seg=[[[i*step,0,-N*step],[i*step,0,N*step]],[[-N*step,0,i*step],[N*step,0,i*step]]];
+      for(const [a,b] of seg){const pa=project(a,cam),pb=project(b,cam);if(!pa||!pb)continue;
+        const fade=clamp(1-Math.abs(i)/N,0,1);
+        ctx.strokeStyle=`rgba(120,150,170,${0.05+fade*0.09})`;
+        ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();}
+    }
+    const O=project([0,0.02,0],cam);
+    if(O){const colr=["#ff5a6a","#59d98a","#4aa8ff"];
+      [[2.4,0.02,0],[0,2.4,0],[0,0.02,2.4]].forEach((v,i)=>{const e=project(v,cam);if(!e)return;
+        ctx.strokeStyle=colr[i];ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(O.x,O.y);ctx.lineTo(e.x,e.y);ctx.stroke();});}
+  }
+
+  function update(dt){
+    st.t+=dt; st.speed=+speedEl.value;
+    const rb=clamp((st.speed-REF)/8,0,1);
+    const moving=st.speed>0.5;
+
+    // jump arc
+    if(st.jumpT>=0){ st.jumpT+=dt; const T=0.82;
+      const u=clamp(st.jumpT/T,0,1); st.hopY=Math.sin(u*Math.PI)*3.2;
+      st.air = damp(st.air, u<1?1:0, 0.08, dt);
+      if(st.jumpT>=T){ st.jumpT=-1; }
+    } else { st.hopY=damp(st.hopY,0,0.12,dt); st.air=damp(st.air,0,0.10,dt); }
+
+    const ampTgt = moving ? clamp(st.speed/6,0,1) : 0;
+    st.amp=damp(st.amp,ampTgt,0.11,dt);
+    st.lean=damp(st.lean, clamp(st.speed/24,0,1)*LEAN_MAX, 0.15, dt);
+    st.leanEff = st.lean*(1-st.air) + (-rad(6))*st.air;
+
+    if(st.amp>0.02 && st.air<0.5) st.phase=(st.phase + st.speed*dt*STRIDE)%(Math.PI*2);
+
+    if(st.autoTurn && !reduce) st.facing=Math.sin(st.t*0.7)*rad(38);
+    const turnRate=(st.facing-st.lastFacing)/dt; st.lastFacing=st.facing;
+    st.bank=damp(st.bank, clamp(turnRate*0.28,-rad(14),rad(14)), 0.12, dt);
+
+    st.bobY=Math.sin(st.phase*2)*mix(BOB_W,BOB_R,rb)*st.amp;
+    st.latX=Math.sin(st.phase)*LAT*st.amp;
+    if(st.autoOrbit && !reduce) st.az+=dt*0.4;
+  }
+
+  function render(){
+    const cam=makeCam(); ctx.clearRect(0,0,W,H); drawGrid(cam);
+    const ang=limbAngles();
+    const faces=[];
+    for(const p of parts){
+      const wf=worldFn(p, ang);
+      const wc=cornersOf(p).map(wf);
+      const pr=wc.map(v=>project(v,cam));
+      for(const f of FACE){
+        const a=pr[f[0]],b=pr[f[1]],c=pr[f[2]],d=pr[f[3]];
+        if(!a||!b||!c||!d)continue;
+        const wa=wc[f[0]],wb=wc[f[1]],wc3=wc[f[2]];
+        let n=norm(cross(sub(wb,wa),sub(wc3,wa)));
+        if(dot(n,sub(cam.eye,wa))<0)n=[-n[0],-n[1],-n[2]];
+        const br=clamp(dot(n,LIGHT)*0.55+0.5,0.22,1.05);
+        faces.push({z:(a.z+b.z+c.z+d.z)/4,pts:[a,b,c,d],fill:shade(p.col,br)});
+      }
+    }
+    faces.sort((u,v)=>v.z-u.z);
+    for(const f of faces){
+      ctx.beginPath();ctx.moveTo(f.pts[0].x,f.pts[0].y);
+      for(let i=1;i<4;i++)ctx.lineTo(f.pts[i].x,f.pts[i].y);
+      ctx.closePath();ctx.fillStyle=f.fill;ctx.fill();
+      ctx.strokeStyle="rgba(0,0,0,0.28)";ctx.lineWidth=1;ctx.stroke();
+    }
+  }
+
+  const hSpeed=document.getElementById("hudSpeed"),hState=document.getElementById("hudState");
+  const hCad=document.getElementById("hudCad"),hLean=document.getElementById("hudLean");
+  const spdVal=document.getElementById("spdVal");
+  let hudT=0;
+  function updateHud(now){
+    if(now-hudT<90)return; hudT=now;
+    hSpeed.innerHTML=`${st.speed.toFixed(0)}<small> sps</small>`;
+    const state = st.air>0.5?"Jump" : st.speed<0.5?"Idle" : st.speed>16.5?"Run":"Walk";
+    hState.textContent=state;
+    // cadence: strides/min = speed*STRIDE/(2π)*60, ×2 steps
+    const cad = st.amp>0.05 ? Math.round(st.speed*STRIDE/(Math.PI*2)*60*2) : 0;
+    hCad.innerHTML=`${cad}<small>/min</small>`;
+    hLean.textContent=`${deg(st.leanEff).toFixed(0)}°`;
+    const label=st.speed<0.5?"idle":st.speed<=16.5?"walk":"run";
+    spdVal.textContent=`${st.speed.toFixed(st.speed%1?1:0)} · ${label}`;
+  }
+
+  let last=performance.now();
+  function loop(now){const dt=clamp((now-last)/1000,0.001,0.05);last=now;update(dt);render();updateHud(now);requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+
+  const speedEl=document.getElementById("speed");
+  const presetBtns=[...document.querySelectorAll(".presets button")];
+  function reflect(){
+    speedEl.style.setProperty("--fill",(speedEl.value/24*100)+"%");
+    const v=+speedEl.value;
+    presetBtns.forEach(b=>b.classList.toggle("on",
+      (b.dataset.spd==="0"&&v<0.5)||(b.dataset.spd==="16"&&v>0.5&&v<=16.5)||(b.dataset.spd==="24"&&v>16.5)));
+  }
+  speedEl.addEventListener("input",reflect);
+  presetBtns.forEach(b=>b.addEventListener("click",()=>{speedEl.value=b.dataset.spd;reflect();}));
+  reflect();
+
+  document.getElementById("jumpBtn").addEventListener("click",()=>{ if(st.jumpT<0) st.jumpT=0; });
+  document.getElementById("tTurn").addEventListener("change",e=>{st.autoTurn=e.target.checked;if(!e.target.checked)st.facing=0;});
+  document.getElementById("tOrbit").addEventListener("change",e=>st.autoOrbit=e.target.checked);
+
+  let dragging=false,px=0,py=0;
+  canvas.addEventListener("pointerdown",e=>{dragging=true;px=e.clientX;py=e.clientY;
+    canvas.classList.add("grabbing");canvas.setPointerCapture(e.pointerId);
+    document.getElementById("tOrbit").checked=false;st.autoOrbit=false;});
+  canvas.addEventListener("pointermove",e=>{if(!dragging)return;
+    st.az-=(e.clientX-px)*0.008; st.el=clamp(st.el+(e.clientY-py)*0.006,-0.3,1.1);
+    px=e.clientX;py=e.clientY;});
+  const end=()=>{dragging=false;canvas.classList.remove("grabbing");};
+  canvas.addEventListener("pointerup",end); canvas.addEventListener("pointercancel",end);
+  canvas.addEventListener("wheel",e=>{e.preventDefault();st.radius=clamp(st.radius+Math.sign(e.deltaY)*1.1,9,28);},{passive:false});
+
+  // gentle intro so it reads immediately
+  window.addEventListener("keydown",e=>{ if(e.code==="Space"){e.preventDefault(); if(st.jumpT<0)st.jumpT=0;} });
+})();
+</script>

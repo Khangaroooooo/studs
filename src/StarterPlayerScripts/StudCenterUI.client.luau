@@ -39,7 +39,7 @@ title.BackgroundTransparency = 1
 title.Text = "STUD CENTER"
 title.TextColor3 = Color3.fromRGB(100, 180, 255)
 title.TextScaled = true
-title.Font = Enum.Font.GothamBold
+title.Font = Enum.Font.Arcade
 title.Parent = frame
 
 -- Close button
@@ -49,7 +49,7 @@ closeBtn.Position = UDim2.new(1, -50, 0, 5)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.new(1, 1, 1)
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Font = Enum.Font.Arcade
 closeBtn.TextSize = 20
 closeBtn.Parent = frame
 
@@ -84,7 +84,7 @@ local function createStatRow(name, value, order, color)
 	nameLabel.Text = name
 	nameLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
 	nameLabel.TextScaled = true
-	nameLabel.Font = Enum.Font.Gotham
+	nameLabel.Font = Enum.Font.Arcade
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Parent = row
 
@@ -96,7 +96,7 @@ local function createStatRow(name, value, order, color)
 	valueLabel.Text = value
 	valueLabel.TextColor3 = color or Color3.new(1, 1, 1)
 	valueLabel.TextScaled = true
-	valueLabel.Font = Enum.Font.GothamBold
+	valueLabel.Font = Enum.Font.Arcade
 	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 	valueLabel.Parent = row
 
@@ -133,7 +133,7 @@ healLabel.BackgroundTransparency = 1
 healLabel.Text = "Your encounter cooldown has been reset!"
 healLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 healLabel.TextScaled = true
-healLabel.Font = Enum.Font.GothamBold
+healLabel.Font = Enum.Font.Arcade
 healLabel.LayoutOrder = 6
 healLabel.Parent = statsFrame
 

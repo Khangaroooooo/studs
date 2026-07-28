@@ -75,7 +75,7 @@ titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.TextColor3 = Color3.fromRGB(255, 230, 180)
 titleLabel.TextSize = 22
-titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Font = Enum.Font.Arcade
 titleLabel.Text = "📌 Studville Tips"
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = header
@@ -88,7 +88,7 @@ closeBtn.Position = UDim2.new(1, -44, 0, 7)
 closeBtn.BackgroundColor3 = Color3.fromRGB(160, 60, 40)
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextSize = 18
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Font = Enum.Font.Arcade
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = header
 
@@ -133,7 +133,7 @@ for i, tip in ipairs(TIPS) do
 	tipLabel.BackgroundTransparency = 1
 	tipLabel.TextColor3 = Color3.fromRGB(60, 40, 20)
 	tipLabel.TextSize = 13
-	tipLabel.Font = Enum.Font.Gotham
+	tipLabel.Font = Enum.Font.Arcade
 	tipLabel.Text = "- " .. tip
 	tipLabel.TextXAlignment = Enum.TextXAlignment.Left
 	tipLabel.TextTruncate = Enum.TextTruncate.AtEnd

@@ -35,7 +35,7 @@ local function makeButton(text, position)
 	btn.TextColor3 = Color3.fromRGB(255, 200, 50)
 	btn.TextSize = 24
 	btn.Text = text
-	btn.Font = Enum.Font.GothamBold
+	btn.Font = Enum.Font.Arcade
 	btn.BorderSizePixel = 0
 	btn.Parent = screenGui
 

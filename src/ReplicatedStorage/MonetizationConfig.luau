@@ -21,8 +21,8 @@ local MonetizationConfig = {}
 -- read that attribute (EncounterSystem reads "ShinyCharm", SaveManager reads
 -- "ExtraSaveSlots"). `label` is only for your own reference here.
 MonetizationConfig.Gamepasses = {
-	{ id = 0, attr = "ShinyCharm",     value = true, label = "Shiny Charm (2x shiny odds)" },
-	{ id = 0, attr = "ExtraSaveSlots", value = 5,    label = "Slot Bundle (+5 save slots)" },
+	{ id = 1918299156, attr = "ShinyCharm",     value = true, label = "Shiny Charm (2x shiny odds)" },
+	{ id = 1917621174, attr = "ExtraSaveSlots", value = 5,    label = "Slot Bundle (+5 save slots)" },
 } :: { Gamepass }
 
 -- ─── DEVELOPER PRODUCTS (coin packs) ───────────────────────────────────
@@ -42,6 +42,11 @@ MonetizationConfig.Badges = {
 	first_legendary = 0,
 	coins_500       = 0,
 	catches_50      = 0,
+	first_shiny     = 0,
+	first_evolution = 0,
+	first_trade     = 0,
+	first_pvp_win   = 0,
+	first_coop      = 0,
 } :: { [string]: number }
 
 return MonetizationConfig

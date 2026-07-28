@@ -8,6 +8,7 @@ local Lighting = game:GetService('Lighting')
 local StudEvents = ReplicatedStorage:WaitForChild('StudEvents')
 local StudData = require(ReplicatedStorage:WaitForChild('StudData'))
 local Combat = require(ReplicatedStorage:WaitForChild('Combat'))
+local BattleTeam = require(ReplicatedStorage:WaitForChild('BattleTeam'))
 local ServerRegistry = require(ReplicatedStorage:WaitForChild('ServerRegistry'))
 
 -- Active battles: playerId -> battleState
@@ -23,21 +24,8 @@ local CONFIG = {
     AI_DELAY = 1.2,
 }
 
--- Helper: find the caught entry for a species (highest level owned) and
--- lazily initialize level/exp fields on it
-local function getOwnedEntry(playerInfo, studId)
-    local best = nil
-    for _, caught in ipairs(playerInfo.data.caughtStuds) do
-        if caught.id == studId then
-            caught.level = caught.level or 1
-            caught.exp = caught.exp or 0
-            if not best or caught.level > best.level then
-                best = caught
-            end
-        end
-    end
-    return best
-end
+-- Helper: find the caught entry for a species (shared with EncounterSystem)
+local getOwnedEntry = BattleTeam.GetOwnedEntry
 
 -- Helper: one wild/trainer attack against the player's stud. Plain wilds
 -- jab with the basic 1.0x move; TRAINER studs fight with their real kit —
@@ -85,110 +73,19 @@ local function getMaxHP(stud, level)
 end
 
 -- ─── BATTLE TEAM ───────────────────────────────────────────────────────
--- Arena/trainer battles are fought by a team of up to MAX_TEAM studs
--- (data.equippedTeam, lead first). The active member fights; the player can
--- Switch to a reserve (costs the turn) or is forced to send one in on a faint.
--- Each member keeps its own HP so damage persists across switches.
-local MAX_TEAM = 6
-
--- Build the battle team from the player's saved roster, falling back to the
--- single equipped stud and then the first owned species.
-local function buildTeam(playerInfo)
-    local ids = {}
-    local team = playerInfo.data.equippedTeam
-    if type(team) == 'table' and #team > 0 then
-        for _, id in ipairs(team) do table.insert(ids, id) end
-    elseif playerInfo.data.equippedStudId then
-        ids = { playerInfo.data.equippedStudId }
-    else
-        local first = playerInfo.data.caughtStuds[1]
-        if first then ids = { first.id } end
-    end
-
-    local members = {}
-    local seen = {}
-    for _, id in ipairs(ids) do
-        if not seen[id] then
-            seen[id] = true
-            local stud = StudData.GetStudById(id)
-            local entry = getOwnedEntry(playerInfo, id)
-            if stud and entry then
-                local level = entry.level or 1
-                local maxHP = getMaxHP(stud, level)
-                local held = playerInfo.data.heldItems and playerInfo.data.heldItems[id] or nil
-                table.insert(members, {
-                    id = id, stud = stud, entry = entry, level = level,
-                    maxHP = maxHP, hp = maxHP, heldItem = held,
-                    effects = Combat.GatherEffects(stud, held), fainted = false,
-                })
-                if #members >= MAX_TEAM then break end
-            end
-        end
-    end
-    return members
-end
-
--- Point the battle's active-stud fields at team member `idx`
-local function setActive(battle, idx)
-    local m = battle.team[idx]
-    battle.activeIndex = idx
-    battle.playerStud = m.stud
-    battle.playerEntry = m.entry
-    battle.playerLevel = m.level
-    battle.playerMaxHP = m.maxHP
-    battle.playerHP = m.hp
-    battle.playerEffects = m.effects
-end
-
--- Payload describing the active stud (for the client's player card)
-local function studPayload(battle)
-    local m = battle.team and battle.team[battle.activeIndex]
-    if not m then return nil end
-    return {
-        id = m.id, name = m.stud.name, studType = m.stud.studType,
-        rarity = m.stud.rarity, description = m.stud.description,
-        level = m.level, exp = m.entry and m.entry.exp or 0, heldItem = m.heldItem,
-    }
-end
-
--- Client-facing snapshot of the team (active HP is the live battle.playerHP)
-local function teamSnapshot(battle)
-    local out = {}
-    if battle.team then
-        for i, m in ipairs(battle.team) do
-            local isActive = (i == battle.activeIndex)
-            local hp = isActive and battle.playerHP or m.hp
-            table.insert(out, {
-                index = i, id = m.id, name = m.stud.name, studType = m.stud.studType,
-                rarity = m.stud.rarity, level = m.level,
-                hp = math.max(0, math.floor(hp)), maxHP = m.maxHP,
-                fainted = m.fainted or hp <= 0, active = isActive,
-            })
-        end
-    end
-    return out
-end
-
--- Any live reserve to fall back on when the active faints?
-local function hasReserve(battle)
-    if not battle.team then return false end
-    for i, m in ipairs(battle.team) do
-        if i ~= battle.activeIndex and not m.fainted and m.hp > 0 then
-            return true
-        end
-    end
-    return false
-end
+-- Arena/trainer battles are fought by a team of up to BattleTeam.MAX_TEAM
+-- studs (data.equippedTeam, lead first). The active member fights; the player
+-- can Switch to a reserve (costs the turn) or is forced to send one in on a
+-- faint. The team model (build/snapshot/switch/reserve) is shared with
+-- EncounterSystem via ReplicatedStorage/BattleTeam; only the transport here
+-- (BattleState pushes) is battle-specific.
 
 -- Resolve a player faint: mark the active stud down and, if a reserve is
 -- alive, push a force_switch state and return true (battle continues).
 -- Returns false when the whole team is down (caller runs the loss flow).
 local function handlePlayerFaint(player, battle, log)
-    if battle.team and battle.team[battle.activeIndex] then
-        battle.team[battle.activeIndex].fainted = true
-        battle.team[battle.activeIndex].hp = 0
-    end
-    if hasReserve(battle) then
+    BattleTeam.MarkActiveFainted(battle)
+    if BattleTeam.HasReserve(battle) then
         battle.pendingSwitch = true
         table.insert(log, battle.playerStud.name .. ' fainted! Choose your next Stud.')
         StudEvents.BattleState:FireClient(player, {
@@ -198,7 +95,7 @@ local function handlePlayerFaint(player, battle, log)
             wildHP = battle.wildHP,
             wildMaxHP = battle.wildMaxHP,
             turn = battle.turn,
-            team = teamSnapshot(battle),
+            team = BattleTeam.Snapshot(battle),
             log = log,
         })
         return true
@@ -261,22 +158,11 @@ StudEvents.StartBattle.OnServerInvoke = function(player, studId)
     if not playerInfo or not playerInfo.data then
         return { success = false, reason = 'no_data' }
     end
-    -- Build the battle team (studId is the lead the client sent; the full
-    -- team comes from the saved roster). Fall back to the single equipped stud.
-    local team = buildTeam(playerInfo)
+    -- Build the battle team (the full team comes from the saved roster;
+    -- studId — the lead the client sent — is the last-resort fallback).
+    local team = BattleTeam.Build(playerInfo, studId)
     if #team == 0 then
-        local ownedStud = getOwnedEntry(playerInfo, studId)
-        local playerStud = StudData.GetStudById(studId)
-        if not ownedStud or not playerStud then
-            return { success = false, reason = 'not_owned' }
-        end
-        team = { {
-            id = studId, stud = playerStud, entry = ownedStud, level = ownedStud.level or 1,
-            maxHP = getMaxHP(playerStud, ownedStud.level or 1), hp = getMaxHP(playerStud, ownedStud.level or 1),
-            heldItem = playerInfo.data.heldItems and playerInfo.data.heldItems[studId] or nil,
-            effects = Combat.GatherEffects(playerStud, playerInfo.data.heldItems and playerInfo.data.heldItems[studId] or nil),
-            fainted = false,
-        } }
+        return { success = false, reason = 'not_owned' }
     end
     local wildStud = pickWildStud(player)
     -- Wild level scales around the lead stud's level (±2, min 1)
@@ -300,12 +186,12 @@ StudEvents.StartBattle.OnServerInvoke = function(player, studId)
         busy = false,
         wildEffects = Combat.GatherEffects(wildStud, nil),
     }
-    setActive(battleState, 1)
+    BattleTeam.SetActive(battleState, 1)
     activeBattles[player.UserId] = battleState
     StudEvents.BattleState:FireClient(player, {
         action = 'battle_start',
-        playerStud = studPayload(battleState),
-        team = teamSnapshot(battleState),
+        playerStud = BattleTeam.ActivePayload(battleState),
+        team = BattleTeam.Snapshot(battleState),
         wildStud = {
             id = wildStud.id,
             name = wildStud.name,
@@ -469,7 +355,7 @@ StudEvents.BattleAction.OnServerInvoke = function(player, action, moveIndex)
         if not forced and battle.team[battle.activeIndex] then
             battle.team[battle.activeIndex].hp = battle.playerHP
         end
-        setActive(battle, targetIdx)
+        BattleTeam.SetActive(battle, targetIdx)
         battle.pendingSwitch = false
         battle.playerDefending = false
 
@@ -477,8 +363,8 @@ StudEvents.BattleAction.OnServerInvoke = function(player, action, moveIndex)
         if forced then
             StudEvents.BattleState:FireClient(player, {
                 action = 'switch_done',
-                playerStud = studPayload(battle),
-                team = teamSnapshot(battle),
+                playerStud = BattleTeam.ActivePayload(battle),
+                team = BattleTeam.Snapshot(battle),
                 playerHP = battle.playerHP,
                 playerMaxHP = battle.playerMaxHP,
                 wildHP = battle.wildHP,
@@ -521,8 +407,8 @@ StudEvents.BattleAction.OnServerInvoke = function(player, action, moveIndex)
         battle.wildDefending = false
         StudEvents.BattleState:FireClient(player, {
             action = 'turn_update',
-            playerStud = studPayload(battle), -- card follows the new active stud
-            team = teamSnapshot(battle),
+            playerStud = BattleTeam.ActivePayload(battle), -- card follows the new active stud
+            team = BattleTeam.Snapshot(battle),
             playerHP = battle.playerHP,
             playerMaxHP = battle.playerMaxHP,
             wildHP = battle.wildHP,
@@ -771,7 +657,7 @@ ServerRegistry.Register('StartTrainerBattle', function(player, trainerDef)
     end
 
     -- Build the player's battle team (fallback: first owned species)
-    local team = buildTeam(playerInfo)
+    local team = BattleTeam.Build(playerInfo)
     if #team == 0 then
         return false, 'no_stud'
     end
@@ -801,15 +687,15 @@ ServerRegistry.Register('StartTrainerBattle', function(player, trainerDef)
         trainer = trainerDef,
         teamIndex = 1,
     }
-    setActive(battleState, 1)
+    BattleTeam.SetActive(battleState, 1)
     activeBattles[player.UserId] = battleState
 
     StudEvents.BattleState:FireClient(player, {
         action = 'battle_start',
         isTrainer = true,
         trainerName = trainerDef.name,
-        playerStud = studPayload(battleState),
-        team = teamSnapshot(battleState),
+        playerStud = BattleTeam.ActivePayload(battleState),
+        team = BattleTeam.Snapshot(battleState),
         wildStud = {
             id = wildStud.id,
             name = wildStud.name,

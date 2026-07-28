@@ -39,6 +39,14 @@ local storyBeatEvent = ensureRemote("StoryBeat")
 local setStoryModeEvent = ensureRemote("SetStoryMode")
 local storyChoiceEvent = ensureRemote("StoryChoice")
 
+-- Beat pacing (seconds). CHAPTER_CARD_DELAY must outlast WorldsUI's arrival
+-- cutscene so the note lands after it; the Studville pair spaces the opening
+-- so Merle speaks first and the chapter card fires once you've walked a bit.
+local MERLE_WELCOME_DELAY = 3
+local STUDVILLE_CHAPTER_DELAY = 16
+local CHAPTER_CARD_DELAY = 2.5
+local REJOIN_ENDING_RECHECK_DELAY = 8
+
 local activePlayers = ServerRegistry.WaitFor("ActivePlayers", 30)
 if not activePlayers then
 	warn("[StorySystem] ActivePlayers never registered — story beats disabled")
@@ -66,17 +74,16 @@ local function storyOn(data)
 	return data.storyMode ~= false
 end
 
-local function uniqueCount(data)
-	local n = 0
-	for _ in pairs(data.speciesCounts or {}) do
-		n += 1
-	end
-	return n
+-- Unique-species count: SaveManager walks speciesCounts in syncPlayerAttributes
+-- (on load and inside GrantCatch, before OnStoryCatch fires) and publishes it
+-- as the UniqueCount attribute — read that instead of re-walking per catch.
+local function uniqueCount(player)
+	return player:GetAttribute("UniqueCount") or 0
 end
 
-local function registryComplete(data)
-	local total = #StudData.Studs
-	return total > 0 and uniqueCount(data) >= total
+local function registryComplete(player)
+	local total = StudData.GetTotalSpecies()
+	return total > 0 and uniqueCount(player) >= total
 end
 
 local function currentWorld(player)
@@ -113,14 +120,14 @@ local function maybeOpening(player)
 	local story = getStory(data)
 	if story.seen["ch_Studville"] then return end
 
-	task.delay(3, function()
+	task.delay(MERLE_WELCOME_DELAY, function()
 		if not player.Parent then return end
 		local d = getData(player)
 		if d then
 			fireOnce(player, d, "merle_welcome", { kind = "beat", id = "merle_welcome" })
 		end
 	end)
-	task.delay(16, function()
+	task.delay(STUDVILLE_CHAPTER_DELAY, function()
 		if not player.Parent then return end
 		local d = getData(player)
 		if d and currentWorld(player) == "Studville" then
@@ -137,7 +144,7 @@ local function maybeOfferEnding(player, data)
 	local story = getStory(data)
 	if story.ending then return end
 	if not storyOn(data) then return end
-	if not registryComplete(data) then return end
+	if not registryComplete(player) then return end
 	deliver(player, { kind = "ending_offer" })
 end
 
@@ -147,7 +154,7 @@ storyChoiceEvent.OnServerEvent:Connect(function(player, choice)
 	if not data then return end
 	local story = getStory(data)
 	if story.ending then return end
-	if not registryComplete(data) then return end
+	if not registryComplete(player) then return end
 
 	story.ending = choice
 	local ending = StoryData.Ending.choices[choice]
@@ -179,7 +186,7 @@ local function onWorldEnter(player, world)
 	if not StoryData.Chapters[world] then return end
 
 	-- Small delay so the note lands after WorldsUI's arrival cutscene
-	task.delay(2.5, function()
+	task.delay(CHAPTER_CARD_DELAY, function()
 		if not player.Parent then return end
 		local d = getData(player)
 		if not d then return end
@@ -221,7 +228,7 @@ ServerRegistry.Register("OnStoryCatch", function(player, studId, isNew, wasPurch
 	end
 
 	-- Unique-dex twist rungs (fire late if the threshold passed in Casual)
-	local unique = uniqueCount(data)
+	local unique = uniqueCount(player)
 	for _, note in ipairs(StoryData.UniqueNotes) do
 		if unique >= note.count then
 			fireOnce(player, data, note.beatId, { kind = "beat", id = note.beatId })
@@ -289,7 +296,7 @@ local function watchPlayer(player)
 	player:GetAttributeChangedSignal("GameStarted"):Connect(function()
 		maybeOpening(player)
 		-- Rejoining with a complete Registry and no choice made → re-offer
-		task.delay(8, function()
+		task.delay(REJOIN_ENDING_RECHECK_DELAY, function()
 			if not player.Parent then return end
 			local data = getData(player) -- re-fetch: slot may have switched
 			if data then

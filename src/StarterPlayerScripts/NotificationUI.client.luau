@@ -44,8 +44,8 @@ local TYPE_ICONS = {
 }
 
 -- ─── FONTS ───────────────────────────────────────────────────────────────
-local F_HEAD = Enum.Font.Code
-local F_BODY = Enum.Font.RobotoMono
+local F_HEAD = Enum.Font.Arcade
+local F_BODY = Enum.Font.Arcade
 
 -- ─── STATE ───────────────────────────────────────────────────────────────
 local gui
@@ -204,7 +204,7 @@ local function showNotification(nType, title, subtitle)
         pos    = UDim2.new(0, 36, 0, subtitle and subtitle ~= "" and 4 or 0),
         text   = title or "Notification",
         color  = C_WHITE,
-        font   = Enum.Font.GothamBold,
+        font   = Enum.Font.Arcade,
         ts     = 14,
         parent = banner,
     })
@@ -222,7 +222,7 @@ local function showNotification(nType, title, subtitle)
             pos    = UDim2.new(0, 36, 0, 24),
             text   = subtitle,
             color  = C_SEC,
-            font   = Enum.Font.Gotham,
+            font   = Enum.Font.Arcade,
             ts     = 12,
             parent = banner,
         })

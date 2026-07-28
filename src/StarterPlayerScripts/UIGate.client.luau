@@ -24,7 +24,6 @@ local GATED_GUIS = {
 	AreaNameDisplay = true,
 	NotificationUI = true,
 	CatchStreak = true,
-	DailyRewardUI = true, -- reward popup waits behind the gate, shows once it opens
 }
 
 local function gateOpen()

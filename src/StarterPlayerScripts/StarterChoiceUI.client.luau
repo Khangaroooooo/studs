@@ -52,7 +52,7 @@ title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundTransparency = 1
 title.Text = "CHOOSE YOUR FIRST STUD"
 title.TextColor3 = GOLD
-title.Font = Enum.Font.GothamBold
+title.Font = Enum.Font.Arcade
 title.TextSize = 22
 title.Parent = frame
 
@@ -62,7 +62,7 @@ subtitle.Position = UDim2.new(0, 0, 0, 38)
 subtitle.BackgroundTransparency = 1
 subtitle.Text = "Your partner for the whole journey. Choose wisely. Or don't — they're all great."
 subtitle.TextColor3 = Color3.fromRGB(180, 180, 195)
-subtitle.Font = Enum.Font.Gotham
+subtitle.Font = Enum.Font.Arcade
 subtitle.TextSize = 13
 subtitle.Parent = frame
 
@@ -112,7 +112,7 @@ local function buildCards()
 			initial.BackgroundTransparency = 1
 			initial.Text = stud.name:sub(1, 1)
 			initial.TextColor3 = Color3.fromRGB(20, 20, 30)
-			initial.Font = Enum.Font.GothamBold
+			initial.Font = Enum.Font.Arcade
 			initial.TextSize = 38
 			initial.Parent = tile
 
@@ -122,7 +122,7 @@ local function buildCards()
 			nameLbl.BackgroundTransparency = 1
 			nameLbl.Text = stud.name
 			nameLbl.TextColor3 = Color3.new(1, 1, 1)
-			nameLbl.Font = Enum.Font.GothamBold
+			nameLbl.Font = Enum.Font.Arcade
 			nameLbl.TextSize = 20
 			nameLbl.Parent = card
 
@@ -132,7 +132,7 @@ local function buildCards()
 			typeLbl.BackgroundTransparency = 1
 			typeLbl.Text = (typeData and typeData.icon or "") .. " " .. stud.studType
 			typeLbl.TextColor3 = color
-			typeLbl.Font = Enum.Font.GothamBold
+			typeLbl.Font = Enum.Font.Arcade
 			typeLbl.TextSize = 14
 			typeLbl.Parent = card
 
@@ -142,7 +142,7 @@ local function buildCards()
 			descLbl.BackgroundTransparency = 1
 			descLbl.Text = stud.description
 			descLbl.TextColor3 = Color3.fromRGB(190, 190, 205)
-			descLbl.Font = Enum.Font.Gotham
+			descLbl.Font = Enum.Font.Arcade
 			descLbl.TextSize = 12
 			descLbl.TextWrapped = true
 			descLbl.TextYAlignment = Enum.TextYAlignment.Top
@@ -154,7 +154,7 @@ local function buildCards()
 			statsLbl.BackgroundTransparency = 1
 			statsLbl.Text = "ATK " .. stud.stats.attack .. " · DEF " .. stud.stats.defense .. " · SPD " .. stud.stats.speed
 			statsLbl.TextColor3 = Color3.fromRGB(160, 160, 175)
-			statsLbl.Font = Enum.Font.Gotham
+			statsLbl.Font = Enum.Font.Arcade
 			statsLbl.TextSize = 12
 			statsLbl.Parent = card
 
@@ -164,7 +164,7 @@ local function buildCards()
 			pickLbl.BackgroundTransparency = 1
 			pickLbl.Text = "CHOOSE"
 			pickLbl.TextColor3 = GOLD
-			pickLbl.Font = Enum.Font.GothamBold
+			pickLbl.Font = Enum.Font.Arcade
 			pickLbl.TextSize = 14
 			pickLbl.Parent = card
 

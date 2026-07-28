@@ -34,7 +34,17 @@ end
 
 local StudData = require(ReplicatedStorage:WaitForChild("StudData"))
 local Combat = require(ReplicatedStorage:WaitForChild("Combat"))
+local BattleTeam = require(ReplicatedStorage:WaitForChild("BattleTeam"))
 local ServerRegistry = require(ReplicatedStorage:WaitForChild("ServerRegistry"))
+local GrowthConfig = require(ReplicatedStorage:WaitForChild("GrowthConfig"))
+
+-- FTUE: true until the player's active save has its first catch. Drives the
+-- first-catch-in-60s tuning (faster first encounter, near-guaranteed catch).
+local function isPreFirstCatch(player)
+	local activePlayers = ServerRegistry.Get("ActivePlayers")
+	local playerInfo = activePlayers and activePlayers[player.UserId]
+	return playerInfo and playerInfo.data and (playerInfo.data.totalCaught or 0) == 0
+end
 
 -- ANTI-CHEAT: clients report each minigame tap through this event so the
 -- server can require a plausible number of taps before granting a catch.
@@ -79,20 +89,8 @@ local function getMaxHP(rarity, level)
 	return StudData.GetMaxHP(rarity, level or 1)
 end
 
--- Helper: find highest-level caught entry for a species; init level/exp
-local function getOwnedEntry(playerInfo, studId)
-	local best = nil
-	for _, caught in ipairs(playerInfo.data.caughtStuds) do
-		if caught.id == studId then
-			caught.level = caught.level or 1
-			caught.exp = caught.exp or 0
-			if not best or caught.level > best.level then
-				best = caught
-			end
-		end
-	end
-	return best
-end
+-- Helper: find highest-level caught entry for a species (shared with BattleSystem)
+local getOwnedEntry = BattleTeam.GetOwnedEntry
 
 -- Helper: one wild counter-attack against the player's stud (shared by the
 -- Attack exchange, failed catches, and failed flees)
@@ -159,114 +157,22 @@ end
 local endEncounter
 
 -- ─── BATTLE TEAM ───────────────────────────────────────────────────────
--- The encounter is fought by a team of up to MAX_TEAM studs (data.equippedTeam,
--- lead first). Only the active member fights; the player can Switch to a
--- reserve (costs the turn) or is forced to send one in when the active faints.
--- Each member carries its own HP so damage persists across switches.
-local MAX_TEAM = 6
-
--- Build the per-encounter team from the player's saved roster. Falls back to
--- the single equipped stud, then the first owned species, matching the old
--- getPlayerEquippedStud behavior when no team is set.
-local function buildTeam(playerInfo)
-	local ids = {}
-	local team = playerInfo.data.equippedTeam
-	if type(team) == "table" and #team > 0 then
-		for _, id in ipairs(team) do table.insert(ids, id) end
-	elseif playerInfo.data.equippedStudId then
-		ids = { playerInfo.data.equippedStudId }
-	else
-		local first = playerInfo.data.caughtStuds[1]
-		if first then ids = { first.id } end
-	end
-
-	local members = {}
-	local seen = {}
-	for _, id in ipairs(ids) do
-		if not seen[id] then
-			seen[id] = true
-			local stud = StudData.GetStudById(id)
-			local entry = getOwnedEntry(playerInfo, id)
-			if stud and entry then
-				local level = entry.level or 1
-				local maxHP = getMaxHP(stud.rarity, level)
-				local held = playerInfo.data.heldItems and playerInfo.data.heldItems[id] or nil
-				table.insert(members, {
-					id = id, stud = stud, entry = entry, level = level,
-					maxHP = maxHP, hp = maxHP, heldItem = held,
-					effects = Combat.GatherEffects(stud, held), fainted = false,
-				})
-				if #members >= MAX_TEAM then break end
-			end
-		end
-	end
-	return members
-end
-
--- Point the encounter's active-stud fields at team member `idx`
-local function setActiveMember(info, idx)
-	local m = info.team[idx]
-	info.activeIndex = idx
-	info.playerStud = m.stud
-	info.playerEntry = m.entry
-	info.playerLevel = m.level
-	info.playerMaxHP = m.maxHP
-	info.playerHP = m.hp
-	info.playerEffects = m.effects
-end
-
--- Client-facing snapshot of the team (active HP is the live info.playerHP)
-local function teamSnapshot(info)
-	local out = {}
-	if info.team then
-		for i, m in ipairs(info.team) do
-			local isActive = (i == info.activeIndex)
-			local hp = isActive and info.playerHP or m.hp
-			table.insert(out, {
-				index = i, id = m.id, name = m.stud.name, studType = m.stud.studType,
-				rarity = m.stud.rarity, level = m.level,
-				hp = math.max(0, math.floor(hp)), maxHP = m.maxHP,
-				fainted = m.fainted or hp <= 0, active = isActive,
-			})
-		end
-	end
-	return out
-end
-
--- Payload describing the active stud (for the client's player card on switch)
-local function activePayload(info)
-	local m = info.team and info.team[info.activeIndex]
-	if not m then return nil end
-	return {
-		id = m.id, name = m.stud.name, studType = m.stud.studType,
-		rarity = m.stud.rarity, level = m.level,
-		exp = m.entry and m.entry.exp or 0, heldItem = m.heldItem,
-	}
-end
-
--- Any live reserve to fall back on when the active faints?
-local function hasReserve(info)
-	if not info.team then return false end
-	for i, m in ipairs(info.team) do
-		if i ~= info.activeIndex and not m.fainted and m.hp > 0 then
-			return true
-		end
-	end
-	return false
-end
+-- The encounter is fought by a team of up to BattleTeam.MAX_TEAM studs
+-- (data.equippedTeam, lead first). Only the active member fights; the player
+-- can Switch to a reserve (costs the turn) or is forced to send one in when
+-- the active faints. The team model (build/snapshot/switch/reserve) is shared
+-- with BattleSystem via ReplicatedStorage/BattleTeam; only the transport here
+-- (EncounterAction result tables) is encounter-specific.
 
 -- Resolve a player faint: if a reserve is alive the battle continues with a
 -- (free) forced switch; otherwise the player loses. Fills `result` and returns
 -- true when the battle continues, false when it ended in a loss.
 local function onPlayerFaint(player, info, result)
-	if info.team and info.team[info.activeIndex] then
-		info.team[info.activeIndex].fainted = true
-		info.team[info.activeIndex].hp = 0
-	end
-	if hasReserve(info) then
+	BattleTeam.MarkActiveFainted(info)
+	if BattleTeam.HasReserve(info) then
 		info.pendingSwitch = true
 		result.result = "force_switch"
-		result.team = teamSnapshot(info)
+		result.team = BattleTeam.Snapshot(info)
 		return true
 	end
 	result.result = "player_fainted"
@@ -459,6 +365,12 @@ local function pollPlayer(player)
 			encounterRate = encounterRate * 2
 		end
 
+		-- FTUE: before the first catch, encounters trigger much faster so a
+		-- brand-new player reaches "the fun" inside the first minute
+		if isPreFirstCatch(player) then
+			encounterRate = math.max(encounterRate, ENCOUNTER_RATE * GrowthConfig.FTUE.firstEncounterRateMult)
+		end
+
 		-- Roaming legendary event (EventSystem): boosted
 		-- encounter rate inside the event zone
 		local event = ServerRegistry.Get("ActiveLegendaryEvent")
@@ -498,6 +410,7 @@ local function pollPlayer(player)
 				local isShiny = math.random() < shinyChance
 				info.inEncounter = true
 				info.totalEncounters = info.totalEncounters + 1
+				ServerRegistry.Call("OnEncounterStarted", player) -- AnalyticsSystem funnel
 
 				-- Build the battle team (lead first). The active member drives the
 				-- wild-level scaling and all the existing single-stud fields.
@@ -507,7 +420,7 @@ local function pollPlayer(player)
 					local apd = ServerRegistry.Get("ActivePlayers")
 					local pInfo = apd and apd[player.UserId]
 					if pInfo and pInfo.data then
-						info.team = buildTeam(pInfo)
+						info.team = BattleTeam.Build(pInfo)
 						info.activeIndex = 1
 						info.pendingSwitch = nil
 						local active = info.team[1]
@@ -545,9 +458,9 @@ local function pollPlayer(player)
 
 				-- Load the lead as the active stud (HP/effects come from the
 				-- prebuilt member so switches preserve damage). Passive effects
-				-- were resolved per-member in buildTeam.
+				-- were resolved per-member in BattleTeam.Build.
 				if info.team and info.team[1] then
-					setActiveMember(info, 1)
+					BattleTeam.SetActive(info, 1)
 				else
 					info.playerStud = nil
 					info.playerMaxHP = 0
@@ -593,6 +506,9 @@ local function pollPlayer(player)
 					wildLevel = wildLevel,
 					wildMaxHP = info.wildMaxHP,
 					wildHP = info.wildHP,
+					-- FTUE: tells the circle minigame to use the near-guaranteed
+					-- first-catch tuning (server enforces its own generous floor)
+					ftueEasyCatch = (GrowthConfig.FTUE.firstCatchGenerous and isPreFirstCatch(player)) or nil,
 				}
 
 				if playerStud then
@@ -608,7 +524,7 @@ local function pollPlayer(player)
 					encounterData.playerMaxHP = info.playerMaxHP
 					encounterData.playerHP = info.playerHP
 					encounterData.firstStrike = firstStrike
-					encounterData.team = teamSnapshot(info)
+					encounterData.team = BattleTeam.Snapshot(info)
 				end
 
 				encounterStartEvent:FireClient(player, encounterData)
@@ -797,16 +713,16 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 		if not forced and info.team[info.activeIndex] then
 			info.team[info.activeIndex].hp = info.playerHP
 		end
-		setActiveMember(info, targetIdx)
+		BattleTeam.SetActive(info, targetIdx)
 		info.pendingSwitch = nil
 
 		local result = {
 			success = true,
 			action = "Switch",
-			switchedTo = activePayload(info),
+			switchedTo = BattleTeam.ActivePayload(info),
 			playerHP = info.playerHP,
 			playerMaxHP = info.playerMaxHP,
-			team = teamSnapshot(info),
+			team = BattleTeam.Snapshot(info),
 		}
 
 		-- Forced (post-faint) switch: free, the player acts next
@@ -824,7 +740,7 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 		if info.playerHP <= 0 then
 			onPlayerFaint(player, info, result)
 		else
-			result.team = teamSnapshot(info)
+			result.team = BattleTeam.Snapshot(info)
 		end
 		return result
 
@@ -871,6 +787,7 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 		info.lastTapAt = 0
 		local hpRatio = info.wildHP / info.wildMaxHP
 		local rarity = info.wildStud.rarity
+		ServerRegistry.Call("OnCatchStarted", player) -- AnalyticsSystem funnel
 
 		-- Consume the ball the PLAYER CHOSE in the catch picker (nil/"none" =
 		-- no ball; an unowned/invalid id is treated as none, never an error).
@@ -907,6 +824,13 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 		}
 		local params = catchParams[rarity] or catchParams.Common
 
+		-- FTUE: the very first catch succeeds on near-any input (generous bar,
+		-- barely any decay, long timer) — first-catch-in-60s design
+		if GrowthConfig.FTUE.firstCatchGenerous and isPreFirstCatch(player) then
+			params = { barTarget = 30, fillPerTap = 12, decayRate = 0.5 }
+			timerDuration = 20
+		end
+
 		return {
 			success = true,
 			action = "CatchStart",
@@ -935,6 +859,11 @@ encounterActionFunc.OnServerInvoke = function(player, action, arg)
 		-- A catch ball shrinks the bar target, so the legit-minimum tap count
 		-- shrinks by the same factor
 		minTaps = math.max(2, math.floor(minTaps * (info.ballMult or 1) + 0.5))
+		-- FTUE: the generous first-catch bar fills in fewer taps, so the
+		-- plausibility floor must shrink to match
+		if GrowthConfig.FTUE.firstCatchGenerous and isPreFirstCatch(player) then
+			minTaps = 2
+		end
 		if not info.catchStartedAt
 			or (os.clock() - info.catchStartedAt) < 1.5
 			or (info.catchTaps or 0) < minTaps

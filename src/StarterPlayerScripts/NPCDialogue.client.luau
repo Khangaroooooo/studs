@@ -42,7 +42,7 @@ nameLabel.Position = UDim2.new(0.01, 0, 0.02, 0)
 nameLabel.BackgroundTransparency = 1
 nameLabel.Text = ""
 nameLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
-nameLabel.Font = Enum.Font.GothamBold
+nameLabel.Font = Enum.Font.Arcade
 nameLabel.TextSize = 20
 nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 nameLabel.Parent = dialogueBox
@@ -55,7 +55,7 @@ dialogueLabel.Position = UDim2.new(0.01, 0, 0.28, 0)
 dialogueLabel.BackgroundTransparency = 1
 dialogueLabel.Text = ""
 dialogueLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
-dialogueLabel.Font = Enum.Font.Gotham
+dialogueLabel.Font = Enum.Font.Arcade
 dialogueLabel.TextSize = 16
 dialogueLabel.TextXAlignment = Enum.TextXAlignment.Left
 dialogueLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -70,7 +70,7 @@ continueLabel.Position = UDim2.new(0.58, 0, 0.82, 0)
 continueLabel.BackgroundTransparency = 1
 continueLabel.Text = "Press E to continue"
 continueLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-continueLabel.Font = Enum.Font.Gotham
+continueLabel.Font = Enum.Font.Arcade
 continueLabel.TextSize = 12
 continueLabel.Parent = dialogueBox
 
@@ -157,18 +157,18 @@ if studville then
 				setupNPCPrompt(npc)
 			end
 		end
-	end
 
-	-- Handle NPCs added later
-	npcFolder.DescendantAdded:Connect(function(desc)
-		if desc:IsA("ProximityPrompt") then
-			task.wait(0.1)
-			local npcModel = desc.Parent and desc.Parent.Parent
-			if npcModel and npcModel:IsA("Model") then
-				setupNPCPrompt(npcModel)
+		-- Handle NPCs added later
+		npcFolder.DescendantAdded:Connect(function(desc)
+			if desc:IsA("ProximityPrompt") then
+				task.wait(0.1)
+				local npcModel = desc.Parent and desc.Parent.Parent
+				if npcModel and npcModel:IsA("Model") then
+					setupNPCPrompt(npcModel)
+				end
 			end
-		end
-	end)
+		end)
+	end
 end
 
 -- E key to advance dialogue

@@ -51,7 +51,7 @@ toggleBtn.BackgroundTransparency = 0.25
 toggleBtn.TextColor3 = UITheme.C_ACCENT
 toggleBtn.TextSize = 22
 toggleBtn.Text = "🌍"
-toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Font = Enum.Font.Arcade
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Parent = screenGui
 UITheme.ApplyStroke(toggleBtn, UITheme.C_BORDER, 2)
@@ -137,7 +137,7 @@ for i, info in ipairs(WORLD_INFO) do
 		pos = UDim2.new(0, 4, 0, 0),
 		text = info.icon,
 		ts = 22,
-		font = Enum.Font.GothamBold,
+		font = Enum.Font.Arcade,
 		zIndex = 7,
 		parent = row,
 	})
@@ -203,7 +203,7 @@ local cardIcon = UITheme.CreateLabel({
 	pos = UDim2.new(0, 0, 0.36, 0),
 	text = "",
 	ts = 48,
-	font = Enum.Font.GothamBold,
+	font = Enum.Font.Arcade,
 	parent = blackout,
 })
 local cardTitle = UITheme.CreateLabel({

@@ -59,7 +59,7 @@ toggleBtn.BackgroundTransparency = 0.25
 toggleBtn.TextColor3 = GOLD
 toggleBtn.TextSize = 22
 toggleBtn.Text = "🏆"
-toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Font = Enum.Font.Arcade
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Parent = screenGui
 
@@ -99,7 +99,7 @@ titleLabel.Position = UDim2.new(0, 12, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.TextColor3 = GOLD
 titleLabel.TextSize = 18
-titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Font = Enum.Font.Arcade
 titleLabel.Text = "🏆 Leaderboards"
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = header
@@ -111,7 +111,7 @@ closeBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.new(1, 1, 1)
 closeBtn.TextSize = 16
-closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Font = Enum.Font.Arcade
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = header
 
@@ -138,7 +138,7 @@ for i, scope in ipairs({ "server", "global" }) do
 	btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 	btn.TextColor3 = TEXT
 	btn.TextSize = 12
-	btn.Font = Enum.Font.GothamBold
+	btn.Font = Enum.Font.Arcade
 	btn.Text = scope == "server" and "THIS SERVER" or "GLOBAL"
 	btn.BorderSizePixel = 0
 	btn.Parent = scopeFrame
@@ -193,7 +193,7 @@ local function rebuildCategoryButtons()
 		btn.BackgroundColor3 = (cat.key == currentCategory) and GOLD or Color3.fromRGB(50, 50, 65)
 		btn.TextColor3 = (cat.key == currentCategory) and Color3.fromRGB(30, 30, 40) or TEXT
 		btn.TextSize = 11
-		btn.Font = Enum.Font.GothamBold
+		btn.Font = Enum.Font.Arcade
 		btn.Text = cat.label
 		btn.BorderSizePixel = 0
 		btn.Parent = catFrame
@@ -226,7 +226,7 @@ refreshBoard = function()
 		emptyLbl.BackgroundTransparency = 1
 		emptyLbl.TextColor3 = MUTED
 		emptyLbl.TextSize = 13
-		emptyLbl.Font = Enum.Font.Gotham
+		emptyLbl.Font = Enum.Font.Arcade
 		emptyLbl.Text = currentScope == "global"
 			and "No global scores yet.\nBe the first on the board!"
 			or "No scores yet this server."
@@ -247,7 +247,7 @@ refreshBoard = function()
 		rankLbl.BackgroundTransparency = 1
 		rankLbl.TextColor3 = rank <= 3 and GOLD or MUTED
 		rankLbl.TextSize = 13
-		rankLbl.Font = Enum.Font.GothamBold
+		rankLbl.Font = Enum.Font.Arcade
 		rankLbl.Text = rank <= 3 and ({ "🥇", "🥈", "🥉" })[rank] or ("#" .. rank)
 		rankLbl.Parent = row
 
@@ -257,7 +257,7 @@ refreshBoard = function()
 		nameLbl.BackgroundTransparency = 1
 		nameLbl.TextColor3 = entry.name == player.Name and ACCENT or TEXT
 		nameLbl.TextSize = 13
-		nameLbl.Font = Enum.Font.Gotham
+		nameLbl.Font = Enum.Font.Arcade
 		nameLbl.Text = entry.name or "?"
 		nameLbl.TextXAlignment = Enum.TextXAlignment.Left
 		nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
@@ -269,7 +269,7 @@ refreshBoard = function()
 		valueLbl.BackgroundTransparency = 1
 		valueLbl.TextColor3 = GOLD
 		valueLbl.TextSize = 13
-		valueLbl.Font = Enum.Font.GothamBold
+		valueLbl.Font = Enum.Font.Arcade
 		valueLbl.Text = tostring(entry.value or 0)
 		valueLbl.TextXAlignment = Enum.TextXAlignment.Right
 		valueLbl.Parent = row

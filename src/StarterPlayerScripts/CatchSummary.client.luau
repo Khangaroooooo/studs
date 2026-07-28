@@ -68,7 +68,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 	headerLabel.BackgroundTransparency = 1
 	headerLabel.Text = isNew and "New Stud Caught!" or "Duplicate Caught!"
 	headerLabel.TextColor3 = isNew and Color3.fromRGB(255, 220, 100) or Color3.fromRGB(180, 180, 200)
-	headerLabel.Font = Enum.Font.GothamBold
+	headerLabel.Font = Enum.Font.Arcade
 	headerLabel.TextSize = 16
 	headerLabel.TextXAlignment = Enum.TextXAlignment.Left
 	headerLabel.Parent = header
@@ -101,7 +101,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 	if isShiny then displayName = displayName .. " (Shiny!)" end
 	nameLabel.Text = (typeData and typeData.icon or "?") .. " " .. displayName
 	nameLabel.TextColor3 = isShiny and Color3.fromRGB(255, 215, 0) or (typeData and typeData.color or Color3.fromRGB(255, 255, 255))
-	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.Font = Enum.Font.Arcade
 	nameLabel.TextSize = 15
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Parent = studInfoFrame
@@ -113,7 +113,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 	rarityLabel.BackgroundTransparency = 1
 	rarityLabel.Text = stud.rarity .. " " .. stud.studType
 	rarityLabel.TextColor3 = rarityColor
-	rarityLabel.Font = Enum.Font.Gotham
+	rarityLabel.Font = Enum.Font.Arcade
 	rarityLabel.TextSize = 12
 	rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
 	rarityLabel.Parent = studInfoFrame
@@ -151,7 +151,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 	coinText.BackgroundTransparency = 1
 	coinText.Text = "Coins"
 	coinText.TextColor3 = Color3.fromRGB(200, 200, 220)
-	coinText.Font = Enum.Font.Gotham
+	coinText.Font = Enum.Font.Arcade
 	coinText.TextSize = 12
 	coinText.TextXAlignment = Enum.TextXAlignment.Left
 	coinText.Parent = coinRow
@@ -162,7 +162,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 	coinValue.BackgroundTransparency = 1
 	coinValue.Text = "+" .. tostring(coinReward)
 	coinValue.TextColor3 = Color3.fromRGB(255, 215, 0)
-	coinValue.Font = Enum.Font.GothamBold
+	coinValue.Font = Enum.Font.Arcade
 	coinValue.TextSize = 13
 	coinValue.TextXAlignment = Enum.TextXAlignment.Right
 	coinValue.Parent = coinRow
@@ -188,7 +188,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 		evoText.BackgroundTransparency = 1
 		evoText.Text = "EvoPoints (" .. stud.studType .. ")"
 		evoText.TextColor3 = Color3.fromRGB(200, 200, 220)
-		evoText.Font = Enum.Font.Gotham
+		evoText.Font = Enum.Font.Arcade
 		evoText.TextSize = 12
 		evoText.TextXAlignment = Enum.TextXAlignment.Left
 		evoText.Parent = evoRow
@@ -199,7 +199,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 		evoValue.BackgroundTransparency = 1
 		evoValue.Text = "+1"
 		evoValue.TextColor3 = Color3.fromRGB(100, 200, 255)
-		evoValue.Font = Enum.Font.GothamBold
+		evoValue.Font = Enum.Font.Arcade
 		evoValue.TextSize = 13
 		evoValue.TextXAlignment = Enum.TextXAlignment.Right
 		evoValue.Parent = evoRow
@@ -226,7 +226,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 		shinyText.BackgroundTransparency = 1
 		shinyText.Text = "Shiny Bonus!"
 		shinyText.TextColor3 = Color3.fromRGB(255, 215, 0)
-		shinyText.Font = Enum.Font.GothamBold
+		shinyText.Font = Enum.Font.Arcade
 		shinyText.TextSize = 12
 		shinyText.TextXAlignment = Enum.TextXAlignment.Left
 		shinyText.Parent = shinyRow
@@ -237,7 +237,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 		shinyValue.BackgroundTransparency = 1
 		shinyValue.Text = "5x Coins!"
 		shinyValue.TextColor3 = Color3.fromRGB(255, 215, 0)
-		shinyValue.Font = Enum.Font.GothamBold
+		shinyValue.Font = Enum.Font.Arcade
 		shinyValue.TextSize = 13
 		shinyValue.TextXAlignment = Enum.TextXAlignment.Right
 		shinyValue.Parent = shinyRow
@@ -251,7 +251,7 @@ local function showCatchSummary(studId, isNew, isShiny)
 	dismissBtn.BackgroundTransparency = 0.2
 	dismissBtn.Text = "Nice!"
 	dismissBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
-	dismissBtn.Font = Enum.Font.GothamBold
+	dismissBtn.Font = Enum.Font.Arcade
 	dismissBtn.TextSize = 13
 	dismissBtn.BorderSizePixel = 0
 	dismissBtn.Parent = panel

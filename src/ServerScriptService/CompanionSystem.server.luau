@@ -83,7 +83,7 @@ local function refreshCompanion(player)
 		local label = Instance.new("TextLabel")
 		label.Size = UDim2.new(1, 0, 1, 0)
 		label.BackgroundTransparency = 1
-		label.Font = Enum.Font.GothamBold
+		label.Font = Enum.Font.Arcade
 		label.TextSize = 12
 		label.TextStrokeTransparency = 0.4
 		label.Parent = billboard

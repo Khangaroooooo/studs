@@ -24,6 +24,11 @@ local MILESTONES = {
 	{ id = "coins_500", name = "Wealthy!", desc = "Earn 500 coins total", icon = "🏦" },
 	{ id = "catches_10", name = "Getting Started", desc = "Catch 10 total Studs", icon = "🎣" },
 	{ id = "catches_50", name = "Dedicated Hunter", desc = "Catch 50 total Studs", icon = "⚡" },
+	{ id = "first_shiny", name = "Shiny Hunter", desc = "Catch a Shiny Stud", icon = "✨" },
+	{ id = "first_evolution", name = "New Form!", desc = "Evolve a Stud", icon = "🧬" },
+	{ id = "first_trade", name = "Introduced a Friend", desc = "Complete your first trade", icon = "🤝" },
+	{ id = "first_pvp_win", name = "Duel Victor", desc = "Win a PvP duel", icon = "⚔️" },
+	{ id = "first_coop", name = "Better Together", desc = "Play in a server with a friend", icon = "🏡" },
 }
 
 -- Helper functions
@@ -61,6 +66,11 @@ local function checkMilestone(data, milestone)
 	elseif id == "coins_500" then return (data.coins or 0) >= 500
 	elseif id == "catches_10" then return (data.totalCaught or 0) >= 10
 	elseif id == "catches_50" then return (data.totalCaught or 0) >= 50
+	elseif id == "first_shiny" then return #(data.shinyStuds or {}) >= 1
+	elseif id == "first_evolution" then return (data.totalEvolutions or 0) >= 1
+	elseif id == "first_trade" then return (data.totalTrades or 0) >= 1
+	elseif id == "first_pvp_win" then return (data.pvpWins or 0) >= 1
+	elseif id == "first_coop" then return data.firstCoopAt ~= nil
 	end
 	return false
 end

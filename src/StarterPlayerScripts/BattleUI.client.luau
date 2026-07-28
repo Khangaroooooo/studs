@@ -118,7 +118,7 @@ local backBtn
 local catchBarFill, catchTimerLbl, catchTapBtn
 local switchFrame, switchBackBtn, switchTitleLbl
 local switchRowBtns = {} -- up to MAX_TEAM_SLOTS static rows in the Studs panel
-local MAX_TEAM_SLOTS = 6
+local MAX_TEAM_SLOTS = require(ReplicatedStorage:WaitForChild("BattleTeam")).MAX_TEAM
 
 -- ─── BUTTON STATE LOOKUP (avoids custom methods on Instances) ──────────
 local _btnState = {}  -- [button] = { disabled, nBg, nTc, nSc, stroke }

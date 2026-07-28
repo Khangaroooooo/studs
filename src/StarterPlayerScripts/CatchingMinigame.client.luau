@@ -341,7 +341,7 @@ local function spawnCircle()
 	circle.TextColor3 = Color3.new(1, 1, 1)
 	circle.TextStrokeColor3 = Color3.fromRGB(15, 60, 25)
 	circle.TextStrokeTransparency = 0.2
-	circle.Font = Enum.Font.GothamBold
+	circle.Font = Enum.Font.Arcade
 	circle.TextScaled = true
 	circle.BorderSizePixel = 0
 	circle.ZIndex = 5
@@ -493,6 +493,15 @@ function startEncounter(studInfo)
 	if studInfo.ballMult and studInfo.ballMult < 1 then
 		local scaled = table.clone(currentRarityConfig)
 		scaled.catchBarTarget = math.max(20, math.floor(scaled.catchBarTarget * studInfo.ballMult + 0.5))
+		currentRarityConfig = scaled
+	end
+
+	-- FTUE: the very first catch succeeds on near-any input (small bar, fast
+	-- fill) — first-catch-in-60s design. Server's min-tap floor matches.
+	if studInfo.ftueEasyCatch then
+		local scaled = table.clone(currentRarityConfig)
+		scaled.catchBarTarget = 40
+		scaled.barFillRate = 1.3
 		currentRarityConfig = scaled
 	end
 

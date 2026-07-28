@@ -127,8 +127,12 @@ local function endDuel(duel, winnerUserId, reason)
 		local data = winner and getData(winner)
 		if winner and data then
 			data.coins = (data.coins or 0) + CONFIG.WIN_COINS
+			data.pvpWins = (data.pvpWins or 0) + 1
 			StudEvents.UpdateCoins:FireClient(winner, data.coins)
 			ServerRegistry.Call("SyncPlayerAttributes", winner, data)
+			task.defer(function()
+				ServerRegistry.Call("CheckMilestones", winner)
+			end)
 		end
 
 		-- EXP for the winning stud, relative to the loser's level — but ONLY

@@ -35,7 +35,7 @@ local function updateTitle(player)
 		label.TextColor3 = GOLD
 		label.TextStrokeColor3 = Color3.fromRGB(20, 20, 30)
 		label.TextStrokeTransparency = 0.3
-		label.Font = Enum.Font.GothamBold
+		label.Font = Enum.Font.Arcade
 		label.TextSize = 14
 		label.Parent = existing
 	end

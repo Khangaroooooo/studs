@@ -74,7 +74,7 @@ newBadge.Position = UDim2.new(0.55, 0, 0.35, 0)
 newBadge.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
 newBadge.Text = "NEW!"
 newBadge.TextColor3 = Color3.fromRGB(40, 20, 0)
-newBadge.Font = Enum.Font.GothamBold
+newBadge.Font = Enum.Font.Arcade
 newBadge.TextSize = 20
 newBadge.BackgroundTransparency = 1
 newBadge.TextTransparency = 1
@@ -179,7 +179,7 @@ local function showSummary(studId, isNew, isShiny)
 		pos = UDim2.new(0, 10, 0, 0),
 		text = isNew and "New Stud Caught!" or "Duplicate Caught!",
 		color = isNew and Color3.fromRGB(255, 220, 100) or Color3.fromRGB(180, 180, 200),
-		font = Enum.Font.GothamBold,
+		font = Enum.Font.Arcade,
 		ts = 16,
 		xa = Enum.TextXAlignment.Left,
 		parent = header,
@@ -213,7 +213,7 @@ local function showSummary(studId, isNew, isShiny)
 		pos = UDim2.new(0, 14, 0, 2),
 		text = (typeData and typeData.icon or "?") .. " " .. displayName,
 		color = isShiny and Color3.fromRGB(255, 215, 0) or (typeData and typeData.color or Color3.fromRGB(255, 255, 255)),
-		font = Enum.Font.GothamBold,
+		font = Enum.Font.Arcade,
 		ts = 15,
 		xa = Enum.TextXAlignment.Left,
 		parent = studInfoFrame,
@@ -226,7 +226,7 @@ local function showSummary(studId, isNew, isShiny)
 		pos = UDim2.new(0, 14, 0.5, 0),
 		text = stud.rarity .. " " .. stud.studType,
 		color = rarityColor,
-		font = Enum.Font.Gotham,
+		font = Enum.Font.Arcade,
 		ts = 12,
 		xa = Enum.TextXAlignment.Left,
 		parent = studInfoFrame,
@@ -271,7 +271,7 @@ local function showSummary(studId, isNew, isShiny)
 			pos = UDim2.new(0, 26, 0, 0),
 			text = label,
 			color = Color3.fromRGB(200, 200, 220),
-			font = Enum.Font.Gotham,
+			font = Enum.Font.Arcade,
 			ts = 12,
 			xa = Enum.TextXAlignment.Left,
 			parent = row,
@@ -283,7 +283,7 @@ local function showSummary(studId, isNew, isShiny)
 			pos = UDim2.new(0.6, 0, 0, 0),
 			text = value,
 			color = valueColor or Color3.fromRGB(255, 215, 0),
-			font = Enum.Font.GothamBold,
+			font = Enum.Font.Arcade,
 			ts = 13,
 			xa = Enum.TextXAlignment.Right,
 			parent = row,
@@ -312,7 +312,7 @@ local function showSummary(studId, isNew, isShiny)
 		transparency = 0.2,
 		text = "Nice!",
 		tc = Color3.fromRGB(200, 200, 255),
-		font = Enum.Font.GothamBold,
+		font = Enum.Font.Arcade,
 		ts = 13,
 		parent = panel,
 	})
