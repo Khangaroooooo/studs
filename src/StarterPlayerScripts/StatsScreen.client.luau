@@ -18,7 +18,6 @@ local UserInputService  = game:GetService("UserInputService")
 -- ─── REFERENCES ──────────────────────────────────────────────────────────
 local player     = Players.LocalPlayer
 local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
-local StudData   = require(ReplicatedStorage:WaitForChild("StudData"))
 local UIManager  = require(ReplicatedStorage:WaitForChild("UIManager"))
 local UITheme    = require(ReplicatedStorage:WaitForChild("UITheme"))
 

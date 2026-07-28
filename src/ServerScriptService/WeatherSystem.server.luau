@@ -4,7 +4,6 @@ local WeatherSystem = {}
 -- Cycles every 3-8 minutes, transitions smoothly
 -- Rain uses ParticleEmitters, fog uses Atmosphere/Fog properties
 
-local RunService = game:GetService("RunService")
 local Lighting = game.Lighting
 local TweenService = game:GetService("TweenService")
 
@@ -19,7 +18,6 @@ local WEATHER = {
 }
 
 local currentWeather = WEATHER.CLEAR
-local weatherTimer = 0
 local weatherDuration = math.random(180, 480) -- 3-8 minutes
 local transitionDuration = 10 -- seconds for smooth transitions
 

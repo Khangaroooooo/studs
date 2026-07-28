@@ -3,7 +3,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
 local StudData = require(ReplicatedStorage:WaitForChild("StudData"))

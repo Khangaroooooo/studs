@@ -24,8 +24,6 @@ local CONFIG = {
     AI_DELAY = 1.2,
 }
 
--- Helper: find the caught entry for a species (shared with EncounterSystem)
-local getOwnedEntry = BattleTeam.GetOwnedEntry
 
 -- Helper: one wild/trainer attack against the player's stud. Plain wilds
 -- jab with the basic 1.0x move; TRAINER studs fight with their real kit —

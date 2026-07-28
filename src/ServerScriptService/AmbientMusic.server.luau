@@ -2,7 +2,6 @@
 -- Uses Roblox's built-in audio assets for a peaceful vibe
 
 local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
 
 -- Create a Sound in Workspace.Sounds for ambient music
 local soundsFolder = workspace:FindFirstChild("Sounds")

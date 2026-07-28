@@ -89,8 +89,6 @@ local function getMaxHP(rarity, level)
 	return StudData.GetMaxHP(rarity, level or 1)
 end
 
--- Helper: find highest-level caught entry for a species (shared with BattleSystem)
-local getOwnedEntry = BattleTeam.GetOwnedEntry
 
 -- Helper: one wild counter-attack against the player's stud (shared by the
 -- Attack exchange, failed catches, and failed flees)

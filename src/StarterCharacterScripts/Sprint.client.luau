@@ -9,7 +9,6 @@ local player = Players.LocalPlayer
 local NORMAL_SPEED = 16
 local SPRINT_SPEED = 24
 
-local isSprinting = false
 local isFrozen = false -- set by encounter system
 
 local function getHumanoid()
@@ -25,7 +24,6 @@ local function setSprinting(sprinting)
 	local humanoid = getHumanoid()
 	if not humanoid then return end
 
-	isSprinting = sprinting
 	humanoid.WalkSpeed = sprinting and SPRINT_SPEED or NORMAL_SPEED
 end
 
@@ -40,7 +38,6 @@ local function monitorWalkSpeed(humanoid)
 	humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 		if humanoid.WalkSpeed == 0 then
 			isFrozen = true
-			isSprinting = false
 		elseif isFrozen and humanoid.WalkSpeed > 0 then
 			isFrozen = false
 			-- Restore correct speed based on shift key state
@@ -65,7 +62,6 @@ end)
 
 -- When character spawns, reset state and disable climbing to prevent wall floating
 player.CharacterAdded:Connect(function(character)
-	isSprinting = false
 	isFrozen = false
 
 	-- Disable Climbing state to prevent floating when jumping into walls,

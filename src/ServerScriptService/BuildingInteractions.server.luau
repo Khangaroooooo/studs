@@ -3,7 +3,6 @@
 -- Shop: Opens shop UI
 -- PlayerHouse: Rest at home
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
 local PromptGuard = require(ReplicatedStorage:WaitForChild("PromptGuard"))

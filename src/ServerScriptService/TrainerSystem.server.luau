@@ -10,11 +10,9 @@
 -- zones), raycast to the ground. Worlds without an EncounterZones folder
 -- are skipped, so partially-built worlds never error.
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local StudData = require(ReplicatedStorage:WaitForChild("StudData"))
 local ServerRegistry = require(ReplicatedStorage:WaitForChild("ServerRegistry"))
 local PromptGuard = require(ReplicatedStorage:WaitForChild("PromptGuard"))
 

@@ -73,7 +73,7 @@ local success, err = pcall(function()
 end)
 dataStoreAvailable = success
 if not success then
-	warn("DataStore not available (likely Studio mode). Using in-memory storage.")
+	warn("DataStore not available (likely Studio mode). Using in-memory storage. Probe error:", err)
 	warn("Saves will NOT survive between play sessions until Studio API access is enabled: Game Settings > Security > 'Enable Studio Access to API Services'.")
 end
 -- Let clients know whether saves actually persist (SaveLoadUI shows a notice)

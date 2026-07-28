@@ -62,7 +62,6 @@ local function onCharacterAdded(character)
 
 	local footstepSound = createFootstepSound(character)
 	local lastStepTime = 0
-	local wasMoving = false
 
 	task.spawn(function()
 		while character:IsDescendantOf(game) and player.Parent == Players do
@@ -90,10 +89,6 @@ local function onCharacterAdded(character)
 					footstepSound.Volume = isSprinting and 0.5 or 0.35
 					footstepSound:Play()
 				end
-
-				wasMoving = true
-			else
-				wasMoving = false
 			end
 		end
 	end)

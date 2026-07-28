@@ -2,8 +2,6 @@
 -- Triggered by ProximityPrompt on NPC models
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -79,7 +77,6 @@ local isDialogueActive = false
 local currentNPC = nil
 local currentLineIndex = 0
 local dialogueLines = {}
-local waitingForContinue = false
 
 local function showDialogue(npcName, line)
 	nameLabel.Text = npcName
@@ -94,7 +91,6 @@ local function closeDialogue()
 	currentNPC = nil
 	currentLineIndex = 0
 	dialogueLines = {}
-	waitingForContinue = false
 end
 
 local function advanceDialogue()

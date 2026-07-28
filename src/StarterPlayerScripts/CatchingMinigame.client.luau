@@ -35,7 +35,6 @@ print("[CatchingMinigame] All dependencies loaded successfully")
 
 -- State
 local isActive = false
-local currentStud = nil
 local currentRarityConfig = nil
 local catchProgress = 0
 local failCount = 0
@@ -473,7 +472,6 @@ end
 function startEncounter(studInfo)
 	if isActive then return end
 	isActive = true
-	currentStud = studInfo
 
 	-- Play encounter flash effect
 	UIManager.Call("PlayEncounterFlash", studInfo.rarity)

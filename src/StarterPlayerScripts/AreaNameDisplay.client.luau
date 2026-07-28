@@ -7,9 +7,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local UITheme = require(ReplicatedStorage:WaitForChild("UITheme"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")

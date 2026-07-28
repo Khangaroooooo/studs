@@ -349,9 +349,12 @@ local function playEncounterFlash(rarity)
 			for shake = 1, 10 do
 				local offsetX = (math.random() - 0.5) * 0.3
 				local offsetY = (math.random() - 0.5) * 0.3
-				camera.CFrame = camera.CFrame * CFrame.new(offsetX, offsetY, 0)
+				-- Offset from where the camera started, not from wherever the
+				-- last nudge left it: compounding turns a shake into a drift.
+				camera.CFrame = originalCFrame * CFrame.new(offsetX, offsetY, 0)
 				task.wait(0.03)
 			end
+			camera.CFrame = originalCFrame
 		end)
 	end
 end

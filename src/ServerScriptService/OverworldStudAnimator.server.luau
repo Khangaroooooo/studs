@@ -4,7 +4,6 @@ local OverworldStudAnimator = {}
 -- Also handles respawning when they drift too far
 
 local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
 
 local overworldFolder = game.Workspace.Studville:FindFirstChild("OverworldStuds")
 if not overworldFolder then return end

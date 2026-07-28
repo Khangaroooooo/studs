@@ -57,7 +57,6 @@ local MAX_TEAM = require(ReplicatedStorage:WaitForChild("BattleTeam")).MAX_TEAM
 local heldItems    = {}   -- [speciesId] = itemId (equipped held items)
 local ownedItems   = {}   -- [itemId] = count (unequipped pool, for the picker)
 local filtered     = {}   -- filtered subset
-local selectedIdx  = nil  -- index into filtered
 local searchQuery  = ""
 
 -- UI references
@@ -477,7 +476,6 @@ function populateGrid()
 
         -- Click handler
         tile.MouseButton1Click:Connect(function()
-            selectedIdx = i
             showDetail(stud)
             -- Highlight selected tile
             for _, child in ipairs(gridScroll:GetChildren()) do
@@ -1070,7 +1068,6 @@ end
 local function openInventory()
     if isOpen then return end
     isOpen = true
-    selectedIdx = nil
     searchQuery = ""
     searchBox.Text = ""
     placeholder.Visible  = true

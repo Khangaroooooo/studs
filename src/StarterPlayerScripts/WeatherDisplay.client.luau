@@ -84,7 +84,6 @@ indicatorIcon.Parent = indicatorFrame
 screenGui.Parent = playerGui
 
 -- ===== NOTIFICATION ANIMATION =====
-local notifVisible = false
 
 local function showWeatherNotif(weather)
     local info = weatherInfo[weather]
