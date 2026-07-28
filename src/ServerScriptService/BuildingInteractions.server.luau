@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
+local PromptGuard = require(ReplicatedStorage:WaitForChild("PromptGuard"))
 
 local studville = workspace:FindFirstChild("Studville")
 if not studville then return end
@@ -13,54 +14,11 @@ if not studville then return end
 -- Healing cooldown tracker
 local healCooldown = {}
 
--- SECURITY: ProximityPrompt.Triggered is client-driven. MaxActivationDistance,
--- RequiresLineOfSight and HoldDuration are all enforced on the CLIENT, so an
--- exploiter fires Triggered from anywhere on the map, at any rate, without ever
--- walking to the building. Every handler below must re-check proximity on the
--- server, exactly like a RemoteEvent — two of them hand out coins, and the
--- StudCenter/house heals otherwise let a player skip the trip back to town.
-local PROMPT_DISTANCE_SLACK = 8 -- studs of tolerance for lag/character offset
-
--- World position of whatever the prompt is attached to (BasePart, Attachment,
--- or a Model via its pivot). Returns nil if it has no position.
-local function promptPosition(prompt)
-	local parent = prompt.Parent
-	if not parent then return nil end
-	if parent:IsA("BasePart") then
-		return parent.Position
-	elseif parent:IsA("Attachment") then
-		return parent.WorldPosition
-	elseif parent:IsA("Model") then
-		local ok, pivot = pcall(function() return parent:GetPivot().Position end)
-		if ok then return pivot end
-	end
-	return nil
-end
-
--- True only if the player has a live character standing within the prompt's own
--- activation range (plus slack). Anything else is a forged or stale trigger.
-local function canUsePrompt(player, prompt)
-	local character = player.Character
-	local hrp = character and character:FindFirstChild("HumanoidRootPart")
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not hrp or not humanoid or humanoid.Health <= 0 then return false end
-
-	local target = promptPosition(prompt)
-	if not target then
-		-- The town geometry is live-edited in Studio and is not in the Rojo tree,
-		-- so an unexpected parent type can't be caught from source. Deny (the
-		-- safe direction) but say so loudly — otherwise this reads as a building
-		-- that mysteriously stopped working.
-		warn("[BuildingInteractions] Cannot resolve a world position for prompt '"
-			.. prompt.Name .. "' (parent: " .. (prompt.Parent and prompt.Parent.ClassName or "nil")
-			.. ") — denying the interaction. Give it a BasePart/Attachment/Model parent.")
-		return false
-	end
-
-	local maxDistance = prompt.MaxActivationDistance
-	if maxDistance <= 0 then maxDistance = 10 end
-	return (hrp.Position - target).Magnitude <= maxDistance + PROMPT_DISTANCE_SLACK
-end
+-- SECURITY: ProximityPrompt.Triggered is client-driven — see PromptGuard. Two
+-- of the handlers below hand out coins, and the StudCenter/house heals would
+-- otherwise let a player skip the trip back to town, so every one of them
+-- re-checks proximity on the server before doing anything.
+local canUsePrompt = PromptGuard.CanUse
 
 -- Setup StudCenter interaction
 local function setupStudCenter()

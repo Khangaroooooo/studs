@@ -16,6 +16,7 @@ local Workspace = game:GetService("Workspace")
 
 local StudData = require(ReplicatedStorage:WaitForChild("StudData"))
 local ServerRegistry = require(ReplicatedStorage:WaitForChild("ServerRegistry"))
+local PromptGuard = require(ReplicatedStorage:WaitForChild("PromptGuard"))
 
 -- Trainer names deliberately avoid the 105 stud names — nobody should
 -- wonder whether Ranger Wanda is catchable. Teams sit mid-band for their
@@ -186,6 +187,11 @@ local function buildTrainerRig(def, rootCFrame, parent)
 	prompt.Parent = torso
 
 	prompt.Triggered:Connect(function(player)
+		-- Triggered is client-driven, so without this an exploiter starts trainer
+		-- battles from anywhere without ever travelling to the zone. Trainer wins
+		-- pay coins on every win (only the badge is first-win gated), so the trip
+		-- is the actual cost being skipped.
+		if not PromptGuard.CanUse(player, prompt) then return end
 		ServerRegistry.Call("StartTrainerBattle", player, def)
 	end)
 
