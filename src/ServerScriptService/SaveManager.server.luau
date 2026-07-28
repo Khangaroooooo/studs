@@ -11,6 +11,14 @@ local StudEvents = ReplicatedStorage:WaitForChild("StudEvents")
 local StudData = require(ReplicatedStorage:WaitForChild("StudData"))
 local BattleTeam = require(ReplicatedStorage:WaitForChild("BattleTeam"))
 local ServerRegistry = require(ReplicatedStorage:WaitForChild("ServerRegistry"))
+local RateLimiter = require(ReplicatedStorage:WaitForChild("RateLimiter"))
+
+-- Slot-management remotes each cost DataStore requests, and the request budget
+-- (60 + 10/player per minute) is SERVER-wide, not per player: one client
+-- spamming these can exhaust it and make autosaves start failing for everyone
+-- else on the server. These are menu actions, so a 1s floor is invisible to a
+-- real player and cuts a flood by ~95%.
+local slotMenuLimiter = RateLimiter.new(1)
 
 -- NOTE: CatchSuccess is NOT created here anymore — it now ships as a synced
 -- static RemoteEvent (StudEvents/CatchSuccess.model.json). Creating a second
@@ -197,6 +205,17 @@ local function setSlotList(userId, slotList)
 		return robustSetAsync("player_" .. userId .. "_slots", slotList)
 	end
 	return true
+end
+
+-- Does this user actually have this slot? Answered from the memory-cached slot
+-- list, so it costs no DataStore request and can safely gate ones that do.
+local function playerOwnsSlot(userId, slotId)
+	local slotList = getSlotList(userId)
+	if not slotList or not slotList.slots then return false end
+	for _, slot in ipairs(slotList.slots) do
+		if slot.slotId == slotId then return true end
+	end
+	return false
 end
 
 local function getSlotData(userId, slotId)
@@ -632,6 +651,7 @@ end
 -- New Game: auto-assign the next available slot. mode is "story" (default)
 -- or "casual" — the menu's Story/Casual pick after pressing New Game.
 StudEvents.NewGame.OnServerEvent:Connect(function(player, mode)
+	if not slotMenuLimiter:allow(player) then return end
 	if not claimSessionLock(player.UserId) then
 		player:Kick("Your save data is still active on another server. Please rejoin in a couple of minutes.")
 		return
@@ -695,6 +715,13 @@ end)
 -- Load Game: client passes the slotId to load
 StudEvents.LoadGame.OnServerEvent:Connect(function(player, slotId)
 	if type(slotId) ~= "number" then return end
+	if not slotMenuLimiter:allow(player) then return end
+
+	-- Resolve the slot against the player's OWN slot list (memory-cached) before
+	-- any DataStore work. Without this, an arbitrary slotId went straight into a
+	-- GetAsync on a key that doesn't exist, so a client could bill the server one
+	-- uncached read per call just by counting upwards.
+	if not playerOwnsSlot(player.UserId, slotId) then return end
 
 	if not claimSessionLock(player.UserId) then
 		player:Kick("Your save data is still active on another server. Please rejoin in a couple of minutes.")
@@ -741,6 +768,7 @@ end)
 -- Delete save slot
 StudEvents.DeleteSaveSlot.OnServerEvent:Connect(function(player, slotId)
 	if type(slotId) ~= "number" then return end
+	if not slotMenuLimiter:allow(player) then return end
 
 	local slotList = getSlotList(player.UserId)
 	if not slotList or not slotList.slots then return end
@@ -772,6 +800,7 @@ end)
 -- Rename save slot
 StudEvents.RenameSaveSlot.OnServerEvent:Connect(function(player, slotId, newName)
 	if type(slotId) ~= "number" then return end
+	if not slotMenuLimiter:allow(player) then return end
 	-- Sanitize: only strings, hard length cap (protects the DataStore blob)
 	if newName ~= nil then
 		if type(newName) ~= "string" then return end
@@ -1632,8 +1661,13 @@ end
 
 -- Auto-save every 60 seconds, STAGGERED: saving all players back-to-back
 -- creates a DataStore request burst that queues/throttles as servers fill up.
--- Spacing saves ~1s apart keeps the request rate smooth at any player count
--- (well within the 60 + 10/player-per-minute write budget: 2 writes/player/min).
+-- Spacing saves ~1s apart keeps the request rate smooth at any player count.
+--
+-- Budget check: each tick costs 3 writes per player per minute — the session
+-- lock refresh (UpdateAsync), the slot data (UpdateAsync), and the slot list
+-- (SetAsync); getSlotList is served from memory, so it costs nothing. Against
+-- the 60 + 10/player-per-minute write budget that is 3N vs 60 + 10N, so the
+-- autosave loop alone can never exhaust it at any player count.
 task.spawn(function()
 	while task.wait(60) do
 		for userId, playerInfo in pairs(activePlayers) do
