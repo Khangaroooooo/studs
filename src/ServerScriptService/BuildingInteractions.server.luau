@@ -13,6 +13,55 @@ if not studville then return end
 -- Healing cooldown tracker
 local healCooldown = {}
 
+-- SECURITY: ProximityPrompt.Triggered is client-driven. MaxActivationDistance,
+-- RequiresLineOfSight and HoldDuration are all enforced on the CLIENT, so an
+-- exploiter fires Triggered from anywhere on the map, at any rate, without ever
+-- walking to the building. Every handler below must re-check proximity on the
+-- server, exactly like a RemoteEvent — two of them hand out coins, and the
+-- StudCenter/house heals otherwise let a player skip the trip back to town.
+local PROMPT_DISTANCE_SLACK = 8 -- studs of tolerance for lag/character offset
+
+-- World position of whatever the prompt is attached to (BasePart, Attachment,
+-- or a Model via its pivot). Returns nil if it has no position.
+local function promptPosition(prompt)
+	local parent = prompt.Parent
+	if not parent then return nil end
+	if parent:IsA("BasePart") then
+		return parent.Position
+	elseif parent:IsA("Attachment") then
+		return parent.WorldPosition
+	elseif parent:IsA("Model") then
+		local ok, pivot = pcall(function() return parent:GetPivot().Position end)
+		if ok then return pivot end
+	end
+	return nil
+end
+
+-- True only if the player has a live character standing within the prompt's own
+-- activation range (plus slack). Anything else is a forged or stale trigger.
+local function canUsePrompt(player, prompt)
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not hrp or not humanoid or humanoid.Health <= 0 then return false end
+
+	local target = promptPosition(prompt)
+	if not target then
+		-- The town geometry is live-edited in Studio and is not in the Rojo tree,
+		-- so an unexpected parent type can't be caught from source. Deny (the
+		-- safe direction) but say so loudly — otherwise this reads as a building
+		-- that mysteriously stopped working.
+		warn("[BuildingInteractions] Cannot resolve a world position for prompt '"
+			.. prompt.Name .. "' (parent: " .. (prompt.Parent and prompt.Parent.ClassName or "nil")
+			.. ") — denying the interaction. Give it a BasePart/Attachment/Model parent.")
+		return false
+	end
+
+	local maxDistance = prompt.MaxActivationDistance
+	if maxDistance <= 0 then maxDistance = 10 end
+	return (hrp.Position - target).Magnitude <= maxDistance + PROMPT_DISTANCE_SLACK
+end
+
 -- Setup StudCenter interaction
 local function setupStudCenter()
 	local studCenter = studville:FindFirstChild("StudCenter")
@@ -25,6 +74,7 @@ local function setupStudCenter()
 	if not prompt then return end
 
 	prompt.Triggered:Connect(function(player)
+		if not canUsePrompt(player, prompt) then return end
 		-- Heal the player (reset encounter cooldown)
 		local now = os.time()
 		if healCooldown[player.UserId] and now - healCooldown[player.UserId] < 5 then
@@ -51,6 +101,7 @@ local function setupShop()
 	if not prompt then return end
 
 	prompt.Triggered:Connect(function(player)
+		if not canUsePrompt(player, prompt) then return end
 		-- Tell client to open shop UI
 		player:SetAttribute("OpenShop", true)
 		task.delay(0.1, function()
@@ -71,6 +122,7 @@ local function setupPlayerHouse()
 	if not prompt then return end
 
 	prompt.Triggered:Connect(function(player)
+		if not canUsePrompt(player, prompt) then return end
 		-- Rest at home - full heal and small coin bonus
 		local now = os.time()
 		if healCooldown[player.UserId] and now - healCooldown[player.UserId] < 10 then
@@ -99,6 +151,7 @@ local function setupStudLab()
 	if not prompt then return end
 
 	prompt.Triggered:Connect(function(player)
+		if not canUsePrompt(player, prompt) then return end
 		-- Tell client to show research/stud info
 		player:SetAttribute("OpenLab", true)
 		task.delay(0.1, function()
@@ -135,6 +188,7 @@ local function setupEvolutionLab()
 	end
 
 	prompt.Triggered:Connect(function(player)
+		if not canUsePrompt(player, prompt) then return end
 		player:SetAttribute("OpenEvolution", true)
 	end)
 end
@@ -152,6 +206,7 @@ local function setupWishingWell()
 	if not prompt then return end
 
 	prompt.Triggered:Connect(function(player)
+		if not canUsePrompt(player, prompt) then return end
 		local now = os.time()
 		if wellCooldown[player.UserId] and now - wellCooldown[player.UserId] < 60 then
 			return -- 60 second cooldown on wishes
@@ -206,6 +261,7 @@ local function setupBattleArena()
 	if not prompt then return end
 
 	prompt.Triggered:Connect(function(player)
+		if not canUsePrompt(player, prompt) then return end
 		-- Tell client to open battle UI
 		player:SetAttribute("OpenBattle", true)
 		task.delay(0.1, function()
