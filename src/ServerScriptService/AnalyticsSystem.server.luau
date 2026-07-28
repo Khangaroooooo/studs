@@ -113,6 +113,27 @@ local function updateDayCounter(player, data)
 	end
 end
 
+-- SaveManager: a save slot became active (New Game or Load Game).
+--
+-- Fired from the load itself rather than observed by the poll below. The poll
+-- runs every 15s, so a player who joined and quit inside that window loaded
+-- their data but never logged step 2 — and the players who quit fastest are
+-- precisely the drop-off the funnel exists to measure, so the poll was biasing
+-- the step it reported. The poll is kept as a backstop for slot switches.
+--
+-- Registered here, below updateDayCounter, because that is a `local`: a closure
+-- created above its declaration would resolve the name as a (nil) global.
+ServerRegistry.Register("OnDataLoaded", function(player, data)
+	local session = sessions[player.UserId]
+	if session then
+		session.trackedData = data
+	end
+	logFunnelStep(player, "data_loaded")
+	if data then
+		updateDayCounter(player, data)
+	end
+end)
+
 -- First co-op session: is any friend in this server right now?
 -- IsFriendsWith can yield (web call), so this runs inside the poll's spawn.
 local function checkCoplay(player, data, session)

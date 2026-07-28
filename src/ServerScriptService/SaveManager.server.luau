@@ -676,6 +676,7 @@ StudEvents.NewGame.OnServerEvent:Connect(function(player, mode)
 		activeSlot = nextSlotId,
 	}
 	syncPlayerAttributes(player, newData)
+	ServerRegistry.Call("OnDataLoaded", player, newData) -- AnalyticsSystem funnel
 
 	-- Gate the tutorial: only fires for brand-new games, never on the menu
 	player:SetAttribute("TutorialSeen", false)
@@ -715,6 +716,7 @@ StudEvents.LoadGame.OnServerEvent:Connect(function(player, slotId)
 		-- drops anything no longer owned) before attributes are synced
 		normalizeTeam(data)
 		syncPlayerAttributes(player, data)
+		ServerRegistry.Call("OnDataLoaded", player, data) -- AnalyticsSystem funnel
 		restorePlayerPosition(player, data.lastPosition)
 		-- Loaded games never re-show the tutorial (old saves without the
 		-- field belong to existing players, so nil counts as "seen").
