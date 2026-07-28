@@ -15,6 +15,9 @@ local evoPoints = {}
 local collection = {}
 local isAnimating = false
 
+-- Defined further down, but the evolve buttons are wired up before that point
+local performEvolution
+
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "EvolutionUI"
@@ -309,7 +312,7 @@ evoText.ZIndex = 101
 evoText.Parent = evoOverlay
 
 -- Perform evolution
-local function performEvolution(studId)
+function performEvolution(studId)
 	if isAnimating then return end
 	isAnimating = true
 
