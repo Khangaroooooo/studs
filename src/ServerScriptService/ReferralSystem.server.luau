@@ -69,7 +69,33 @@ local function enqueueInviterCredit(inviterUserId)
 	end
 end
 
--- Claim any mailbox credits for a player whose save data is now live
+-- Put credits back after a failed claim, so a lost payout is retried on the
+-- player's next join instead of vanishing.
+local function returnInviterCredits(userId, count)
+	if count <= 0 then return end
+	local wrote = false
+	if mailboxStore then
+		local ok = pcall(function()
+			mailboxStore:UpdateAsync(tostring(userId), function(pending)
+				return (pending or 0) + count
+			end)
+		end)
+		wrote = ok
+	end
+	if not wrote then
+		memoryMailbox[userId] = (memoryMailbox[userId] or 0) + count
+	end
+end
+
+-- Claim any mailbox credits for a player whose save data is now live.
+--
+-- The mailbox is the durable record of an owed payout, and clearing it is what
+-- makes this claim final. So the coins must be durably saved BEFORE the claim
+-- is allowed to stand: grant in memory -> persist -> and if the write fails,
+-- return the credits to the mailbox. Zeroing the mailbox and leaving the coins
+-- in RAM until the next autosave (~60s) loses the payout outright if the
+-- server crashes or the player leaves in that window — the same failure the
+-- ProcessReceipt fix removed from the purchase path.
 local function claimInviterCredits(player, data)
 	local count = 0
 	if mailboxStore then
@@ -83,13 +109,31 @@ local function claimInviterCredits(player, data)
 	count += memoryMailbox[player.UserId] or 0
 	memoryMailbox[player.UserId] = nil
 
-	if count > 0 then
-		grantCoins(player, data, count * REWARD.inviterCoins)
-		notify(player, "They made it home!",
-			count .. (count == 1 and " friend you invited" or " friends you invited")
-				.. " caught their first stud — +" .. (count * REWARD.inviterCoins) .. " coins!")
-		print("[Referral] " .. player.Name .. " claimed " .. count .. " referral credit(s)")
+	if count <= 0 then return end
+
+	local reward = count * REWARD.inviterCoins
+	local prevCoins = data.coins or 0
+	grantCoins(player, data, reward)
+
+	local activePlayers = ServerRegistry.Get("ActivePlayers")
+	local playerInfo = activePlayers and activePlayers[player.UserId]
+	local saved = playerInfo and playerInfo.activeSlot
+		and ServerRegistry.Call("PersistPlayer", player.UserId, playerInfo.activeSlot, data, player)
+
+	if not saved then
+		data.coins = prevCoins
+		StudEvents.UpdateCoins:FireClient(player, data.coins)
+		ServerRegistry.Call("SyncPlayerAttributes", player, data)
+		returnInviterCredits(player.UserId, count)
+		warn("[Referral] Durable save FAILED claiming " .. count
+			.. " credit(s) for " .. player.Name .. " — returned to the mailbox for next join")
+		return
 	end
+
+	notify(player, "They made it home!",
+		count .. (count == 1 and " friend you invited" or " friends you invited")
+			.. " caught their first stud — +" .. reward .. " coins!")
+	print("[Referral] " .. player.Name .. " claimed " .. count .. " referral credit(s)")
 end
 
 -- ─── FIRST-CATCH GATE (fired by SaveManager's GrantCatch) ──────────────
@@ -108,12 +152,11 @@ ServerRegistry.Register("OnFirstCatch", function(player, data)
 	local inviter = Players:GetPlayerByUserId(data.referredBy)
 	local activePlayers = ServerRegistry.Get("ActivePlayers")
 	local inviterInfo = inviter and activePlayers and activePlayers[inviter.UserId]
-	if inviter and inviterInfo and inviterInfo.data then
+	local payInviterDirectly = inviter and inviterInfo and inviterInfo.data
+	if payInviterDirectly then
 		grantCoins(inviter, inviterInfo.data, REWARD.inviterCoins)
 		notify(inviter, "They made it home!",
 			player.Name .. " caught their first stud — +" .. REWARD.inviterCoins .. " coins!")
-	else
-		task.spawn(enqueueInviterCredit, data.referredBy)
 	end
 
 	-- The rewarded flag must survive a crash (double-pay guard), same policy
@@ -121,8 +164,18 @@ ServerRegistry.Register("OnFirstCatch", function(player, data)
 	local playerInfo = activePlayers and activePlayers[player.UserId]
 	if playerInfo and playerInfo.activeSlot then
 		task.spawn(function()
-			ServerRegistry.Call("PersistPlayer", player.UserId, playerInfo.activeSlot, data, player)
+			local saved = ServerRegistry.Call("PersistPlayer", player.UserId, playerInfo.activeSlot, data, player)
+			-- Enqueue the offline inviter's credit only once referralRewarded is
+			-- durable. The mailbox write is itself durable, so enqueueing first
+			-- would pay the inviter again the next time OnFirstCatch re-fires
+			-- after a failed save.
+			if saved and not payInviterDirectly then
+				enqueueInviterCredit(data.referredBy)
+			end
 		end)
+	elseif not payInviterDirectly then
+		-- No slot to persist into (session-only play); mailbox is the only record
+		task.spawn(enqueueInviterCredit, data.referredBy)
 	end
 
 	print("[Referral] Completed: " .. player.Name .. " (invited by " .. tostring(data.referredBy) .. ")")
