@@ -53,7 +53,6 @@ local phases = {
 }
 
 local phaseOrder = {"Dawn", "Day", "Dusk", "Night"}
-local currentPhaseIndex = 1
 
 -- Create atmosphere for color correction
 local atmosphere = Instance.new("Atmosphere")
@@ -93,7 +92,10 @@ local function applyPhase(phaseName, tweenDuration)
 		OutdoorAmbient = phase.outdoorAmbient,
 		FogColor = phase.fogColor,
 		FogEnd = phase.fogEnd,
-		ClockTime = tonumber(phase.timeOfDay:sub(1, 2)) + tonumber(phase.timeOfDay:sub(4, 5)) / 60,
+		-- A malformed timeOfDay would otherwise error here and freeze the
+		-- cycle on whatever phase was last applied.
+		ClockTime = (tonumber(phase.timeOfDay:sub(1, 2)) or 0)
+			+ (tonumber(phase.timeOfDay:sub(4, 5)) or 0) / 60,
 	}):Play()
 
 	-- Tween atmosphere

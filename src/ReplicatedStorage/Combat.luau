@@ -210,15 +210,15 @@ end
 -- loss, floor 2%), getting knocked out by a weaker one stings (up to 20%).
 -- 10% at even levels; hard cap so hoarders aren't wiped by one bad fight.
 function Combat.CalculateFaintPenalty(coins: number?, loserLevel: number?, opponentLevel: number?): number
-	coins = math.max(0, math.floor(coins or 0))
-	if coins == 0 then return 0 end
+	local held = math.max(0, math.floor(coins or 0))
+	if held == 0 then return 0 end
 	local ratio = math.max(1, opponentLevel or 1) / math.max(1, loserLevel or 1)
 	local frac = math.clamp(
 		Combat.CONFIG.FAINT_LOSS_BASE / ratio,
 		Combat.CONFIG.FAINT_LOSS_MIN,
 		Combat.CONFIG.FAINT_LOSS_MAX
 	)
-	return math.min(math.floor(coins * frac), Combat.CONFIG.FAINT_LOSS_CAP, coins)
+	return math.min(math.floor(held * frac), Combat.CONFIG.FAINT_LOSS_CAP, held)
 end
 
 -- ─── STATUS EFFECTS ────────────────────────────────────────────────────
