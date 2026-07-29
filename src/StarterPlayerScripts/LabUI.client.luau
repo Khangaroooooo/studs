@@ -620,6 +620,10 @@ closeBtn.MouseButton1Click:Connect(closeLab)
 -- Handle evolve button clicks
 for typeName, rowData in pairs(evoRows) do
     rowData.evolveBtn.MouseButton1Click:Connect(function()
+        -- Despite the name, this holds the species being evolved FROM, which
+        -- is what EvolveStud expects as its first argument. The optional
+        -- second argument is the branch to evolve into; the Lab never
+        -- branches, so it is omitted and the server picks the default path.
         local targetId = rowData.evolveBtn:GetAttribute("EvolveTarget")
         if not targetId then return end
 
