@@ -1,5 +1,7 @@
 # studs
 
+[![CI](https://github.com/Khangaroooooo/studs/actions/workflows/ci.yml/badge.svg)](https://github.com/Khangaroooooo/studs/actions/workflows/ci.yml)
+
 A Roblox game built as real source — ~27,000 lines of Luau across 87 modules, versioned in
 git and synced into Studio with [Rojo](https://github.com/rojo-rbx/rojo), rather than edited
 as loose scripts inside the editor.
