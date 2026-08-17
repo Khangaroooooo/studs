@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Rojo build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rojo
+        run: |
+          curl -sSfL -o rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -q -o rojo.zip -d "$HOME/.local/bin"
+          chmod +x "$HOME/.local/bin/rojo"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build place file
+        run: rojo build default.project.json -o studs-ci.rbxlx
+
+      - name: Generate sourcemap
+        run: rojo sourcemap default.project.json -o sourcemap.json
